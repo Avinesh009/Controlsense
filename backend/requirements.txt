@@ -1,0 +1,13 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+python-multipart>=0.0.9
+requests>=2.31.0
+supabase>=2.3.0
+python-jose[cryptography]>=3.3.0
+passlib>=1.7.4
+# Pinned: passlib 1.7.4's bcrypt backend detection crashes on bcrypt>=4.1
+# (https://github.com/pyca/bcrypt/issues/684). Keep this pin until passlib
+# releases a fix, or migrate to a maintained alternative (e.g. argon2-cffi).
+bcrypt==4.0.1
+python-dotenv>=1.0.1

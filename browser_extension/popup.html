@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 240px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 14px;
+      margin: 0;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .badge {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    .status-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .label {
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    .value {
+      font-weight: 600;
+      color: #f1f5f9;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="badge"></div>
+    <div class="title">Workplace Tracker</div>
+  </div>
+  <div class="status-card">
+    <div class="label">Connected Desktop Agent:</div>
+    <div class="value" id="agent-status">Online (Port 8765)</div>
+    <div class="label" style="margin-top: 8px;">Active Domain:</div>
+    <div class="value" id="current-domain">Detecting...</div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

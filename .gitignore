@@ -1,0 +1,40 @@
+# ==== Secrets / environment ====
+.env
+*.env
+!.env.example
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==== Node / frontend ====
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+# ==== Desktop agent build output ====
+desktop_agent/build/
+desktop_agent/dist/
+desktop_agent/*.spec.bak
+*.exe
+
+# ==== Local data / caches ====
+*.db
+*.sqlite3
+agent_cache.db
+
+# ==== OS / editor cruft ====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
