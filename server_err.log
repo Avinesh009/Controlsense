@@ -1,0 +1,4 @@
+INFO:EmployeeMonitoringServer:Static frontend path resolved to: E:\Controlsense\frontend\dist (Exists: True)
+INFO:     Will watch for changes in these directories: ['E:\\Controlsense\\backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [19872] using WatchFiles

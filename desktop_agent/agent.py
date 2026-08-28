@@ -20,8 +20,11 @@ logger = logging.getLogger("MonitoringAgent")
 
 class EmployeeMonitoringAgent:
     def __init__(self, config_path: str = "config.json"):
-        self.config_path = config_path
+        # Setup persistent AppData directory for config storage
+        appdata_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'ControlSenseTracker')
+        self.config_path = os.path.join(appdata_dir, "config.json")
         self.config = self._load_config(config_path)
+        
         self.window_tracker = WindowTracker()
         self.idle_tracker = IdleTracker(idle_threshold_seconds=self.config.get("idle_threshold_seconds", 180))
         self.cache = OfflineBuffer()
@@ -45,13 +48,38 @@ class EmployeeMonitoringAgent:
         self.timer_label = None
         self.break_btn = None
 
-    def _load_config(self, path: str):
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                try:
+    def _load_config(self, default_filename: str):
+        # 1. Load from AppData if it exists
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r") as f:
+                    logger.info(f"Loaded config from AppData: {self.config_path}")
                     return json.load(f)
-                except Exception:
-                    pass
+            except Exception as e:
+                logger.error(f"Failed to load config from AppData: {e}")
+
+        # 2. Try to load from PyInstaller bundled folder if frozen
+        if getattr(sys, 'frozen', False):
+            bundled_path = os.path.join(sys._MEIPASS, default_filename)
+            if os.path.exists(bundled_path):
+                try:
+                    with open(bundled_path, "r") as f:
+                        logger.info(f"Loaded bundled config: {bundled_path}")
+                        return json.load(f)
+                except Exception as e:
+                    logger.error(f"Failed to load bundled config: {e}")
+
+        # 3. Load from current working directory (dev mode)
+        if os.path.exists(default_filename):
+            try:
+                with open(default_filename, "r") as f:
+                    logger.info(f"Loaded local config: {default_filename}")
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load local config: {e}")
+
+        # 4. Fallback default config
+        logger.warning("No config file found. Using default fallback configuration.")
         return {
             "employee_code": "",
             "device_id": "WIN-DESKTOP-CLIENT",
@@ -62,10 +90,13 @@ class EmployeeMonitoringAgent:
 
     def _save_config(self):
         try:
+            # Ensure the directory in AppData exists
+            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
             with open(self.config_path, "w") as f:
                 json.dump(self.config, f, indent=2)
+            logger.info(f"Configuration saved to AppData: {self.config_path}")
         except Exception as e:
-            logger.error(f"Failed to save config: {e}")
+            logger.error(f"Failed to save config to AppData: {e}")
 
     def tracking_loop(self):
         """Asynchronous tracking background loop"""

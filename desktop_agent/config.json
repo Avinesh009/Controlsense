@@ -1,11 +1,11 @@
 {
-  "employee_code": "test@gmail.com",
+  "employee_code": "neeeee@gmail.com",
   "device_id": "EMPLOYEE",
   "server_url": "http://127.0.0.1:8000/api/telemetry/heartbeat",
   "heartbeat_interval_seconds": 5,
   "idle_threshold_seconds": 180,
   "api_secret_key": "2f33cc7c8a2cc67f7e447ed653c765eea4b0c38190a2de6b392456d31a92712d",
-  "employee_name": "Test",
-  "email": "test@gmail.com",
-  "role": "Support Executive"
+  "employee_name": "Neeee",
+  "email": "neeeee@gmail.com",
+  "role": "Developer"
 }

@@ -1,6 +1,12 @@
 import { getToken } from './auth';
 
-const WS_BASE_URL = 'ws://127.0.0.1:8000/ws/live';
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const devPort = window.location.port === '5173';
+
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_BASE_URL = isLocalDev && devPort
+  ? 'ws://127.0.0.1:8000/ws/live'
+  : `${protocol}//${window.location.host}/ws/live`;
 
 class RealtimeHub {
   constructor() {
