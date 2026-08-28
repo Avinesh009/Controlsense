@@ -419,6 +419,26 @@ class EmployeeMonitoringAgent:
 
     def shutdown_agent(self):
         self.is_tracking = False
+        # Send a final logout heartbeat to the server
+        if self.employee_email:
+            try:
+                payload = {
+                    "full_name": self.employee_name,
+                    "email": self.employee_email,
+                    "role": self.employee_role,
+                    "device_id": self.config.get("device_id", "CLIENT"),
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "interval_seconds": 0,
+                    "process_name": "Logout",
+                    "window_title": "Shift Ended",
+                    "active_url": None,
+                    "is_idle": False,
+                    "idle_duration_seconds": 0
+                }
+                logger.info("Sending final logout heartbeat to server...")
+                self.send_signed_heartbeat(payload)
+            except Exception as e:
+                logger.error(f"Failed to send logout heartbeat: {e}")
         # Exit application
         if self.root:
             self.root.destroy()

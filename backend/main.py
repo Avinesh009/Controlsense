@@ -40,7 +40,7 @@ if not API_SECRET_KEY:
 
 CORS_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+    for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175").split(",")
     if origin.strip()
 ]
 
@@ -227,6 +227,12 @@ async def resolve_alert(alert_id: str, admin: str = Depends(auth_module.get_curr
     for alert in aggregator.alerts:
         if alert["id"] == alert_id:
             alert["is_resolved"] = True
+            
+            # Reset employee's youtube_seconds so they can trigger a new alert if they watch again
+            emp_email = alert.get("employee_code")
+            if emp_email in aggregator.employees:
+                aggregator.employees[emp_email]["youtube_seconds"] = 0
+                
             await ws_manager.broadcast_json({"event": "ALERT_RESOLVED", "alert_id": alert_id})
             return {"status": "SUCCESS", "message": "Alert resolved"}
     raise HTTPException(status_code=404, detail="Alert not found")

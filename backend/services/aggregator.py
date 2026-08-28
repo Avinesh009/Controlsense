@@ -58,6 +58,8 @@ class DataAggregator:
                     "current_url": None,
                     "current_category": None,
                     "last_heartbeat": None,
+                    "shift_start_time": None,
+                    "shift_end_time": None,
                     "total_active_seconds": 0,
                     "total_idle_seconds": 0,
                     "control_id_seconds": 0,
@@ -87,6 +89,15 @@ class DataAggregator:
                         matching_emp = list(self.employees.values())[0]
                     else:
                         continue
+
+                # Reconstruct shift times
+                log_time_str = log.get("recorded_at")
+                if log_time_str:
+                    if not matching_emp.get("shift_start_time") or log_time_str < matching_emp["shift_start_time"]:
+                        matching_emp["shift_start_time"] = log_time_str
+                    if log.get("process_name") == "Logout":
+                        if not matching_emp.get("shift_end_time") or log_time_str > matching_emp["shift_end_time"]:
+                            matching_emp["shift_end_time"] = log_time_str
 
                 interval = log.get("duration_seconds", 5)
                 is_idle = log.get("is_idle", False)
@@ -167,6 +178,8 @@ class DataAggregator:
                 "current_url": None,
                 "current_category": None,
                 "last_heartbeat": None,
+                "shift_start_time": None,
+                "shift_end_time": None,
                 "total_active_seconds": 0,
                 "total_idle_seconds": 0,
                 "control_id_seconds": 0,
@@ -192,6 +205,8 @@ class DataAggregator:
             emp["unproductive_seconds"] = 0
             emp["productivity_score"] = 0.0
             emp["app_durations"] = {}
+            emp["shift_start_time"] = None
+            emp["shift_end_time"] = None
         emp["last_active_date"] = current_date_str
 
         # Remove resolved alerts from previous days to keep the memory clean and allow new triggers on day changes
@@ -199,6 +214,63 @@ class DataAggregator:
             a for a in self.alerts
             if a.get("timestamp", "").startswith(current_date_str) or not a.get("is_resolved", False)
         ]
+
+        # Track first check-in of the shift (Login)
+        if not emp.get("shift_start_time"):
+            emp["shift_start_time"] = now_iso
+
+        # Handle explicit logout heartbeat
+        if proc_name == "Logout":
+            emp["current_status"] = "OFFLINE"
+            emp["shift_end_time"] = now_iso
+            emp["current_process"] = None
+            emp["current_window_title"] = None
+            emp["current_url"] = None
+            emp["current_category"] = None
+            emp["last_heartbeat"] = now_iso
+            
+            # Persist to Supabase if connected
+            if supabase_client is not None:
+                try:
+                    res = supabase_client.table("employees").upsert({
+                        "full_name": emp["full_name"],
+                        "email": emp["email"],
+                        "role": emp["role"]
+                    }, on_conflict="email").execute()
+                    
+                    db_emp_id = None
+                    if hasattr(res, 'data') and res.data:
+                        db_emp_id = res.data[0]["id"]
+                        emp["id"] = db_emp_id
+                    
+                    supabase_client.table("activity_logs").insert({
+                        "employee_id": db_emp_id,
+                        "process_name": "Logout",
+                        "window_title": "Shift Ended",
+                        "domain_url": None,
+                        "category": "NEUTRAL",
+                        "is_idle": False,
+                        "duration_seconds": 0
+                    }).execute()
+                except Exception as db_err:
+                    print(f"Supabase persistence error on logout: {db_err}")
+            
+            return {
+                "employee": emp,
+                "log": {
+                    "id": str(uuid.uuid4()),
+                    "employee_code": email,
+                    "process_name": "Logout",
+                    "window_title": "Shift Ended",
+                    "display_name": "Logout",
+                    "category": "NEUTRAL",
+                    "is_idle": False,
+                    "duration_seconds": 0,
+                    "timestamp": now_iso
+                },
+                "category": "NEUTRAL",
+                "display_name": "Logout"
+            }
 
         # Determine live status
         if is_idle:
@@ -242,7 +314,7 @@ class DataAggregator:
             emp["productivity_score"] = round((prod_seconds / total_active) * 100, 1)
 
         # Check for alert trigger (> 30 min continuous YouTube)
-        if emp["youtube_seconds"] > 20 and not any(a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" for a in self.alerts):
+        if emp["youtube_seconds"] > 20 and not any(a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" and not a.get("is_resolved", False) for a in self.alerts):
             self.alerts.insert(0, {
                 "id": str(uuid.uuid4()),
                 "employee_code": email,
