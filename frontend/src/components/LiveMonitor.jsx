@@ -118,6 +118,14 @@ export default function LiveMonitor({ employees, summary, onSelectEmployee }) {
                     </p>
                   )}
                 </div>
+
+                {/* Footer: Shift Times */}
+                <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                  <span>Shift Start: {emp.shift_start_time ? new Date(emp.shift_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                  {emp.shift_end_time && (
+                    <span className="text-rose-400/80">Shift End: {new Date(emp.shift_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  )}
+                </div>
               </div>
             );
           })}

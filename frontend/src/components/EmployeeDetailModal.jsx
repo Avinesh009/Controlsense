@@ -203,6 +203,14 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                   <div className="text-slate-300 text-right font-mono font-semibold">
                     {formatDuration(totalSessionSeconds)}
                   </div>
+                  <div className="text-slate-400">Shift Started (Login):</div>
+                  <div className="text-slate-300 text-right font-mono font-semibold text-emerald-400">
+                    {emp?.shift_start_time ? new Date(emp.shift_start_time).toLocaleTimeString() : 'N/A'}
+                  </div>
+                  <div className="text-slate-400">Shift Ended (Logout):</div>
+                  <div className="text-slate-300 text-right font-mono font-semibold text-rose-400">
+                    {emp?.shift_end_time ? new Date(emp.shift_end_time).toLocaleTimeString() : 'Active Now / Offline'}
+                  </div>
                   <div className="text-slate-400">Last Reported Check-in:</div>
                   <div className="text-slate-300 text-right font-mono">
                     {emp?.last_heartbeat ? new Date(emp.last_heartbeat).toLocaleTimeString() : 'N/A'}
