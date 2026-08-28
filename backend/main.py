@@ -228,10 +228,10 @@ async def resolve_alert(alert_id: str, admin: str = Depends(auth_module.get_curr
         if alert["id"] == alert_id:
             alert["is_resolved"] = True
             
-            # Reset employee's youtube_seconds so they can trigger a new alert if they watch again
+            # Reset employee's youtube_alert_timer so they can trigger a new alert if they watch again
             emp_email = alert.get("employee_code")
             if emp_email in aggregator.employees:
-                aggregator.employees[emp_email]["youtube_seconds"] = 0
+                aggregator.employees[emp_email]["youtube_alert_timer"] = 0
                 
             await ws_manager.broadcast_json({"event": "ALERT_RESOLVED", "alert_id": alert_id})
             return {"status": "SUCCESS", "message": "Alert resolved"}

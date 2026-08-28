@@ -64,6 +64,7 @@ class DataAggregator:
                     "total_idle_seconds": 0,
                     "control_id_seconds": 0,
                     "youtube_seconds": 0,
+                    "youtube_alert_timer": 0,
                     "other_productive_seconds": 0,
                     "unproductive_seconds": 0,
                     "productivity_score": 0.0,
@@ -184,6 +185,7 @@ class DataAggregator:
                 "total_idle_seconds": 0,
                 "control_id_seconds": 0,
                 "youtube_seconds": 0,
+                "youtube_alert_timer": 0,
                 "other_productive_seconds": 0,
                 "unproductive_seconds": 0,
                 "productivity_score": 0.0,
@@ -201,6 +203,7 @@ class DataAggregator:
             emp["total_idle_seconds"] = 0
             emp["control_id_seconds"] = 0
             emp["youtube_seconds"] = 0
+            emp["youtube_alert_timer"] = 0
             emp["other_productive_seconds"] = 0
             emp["unproductive_seconds"] = 0
             emp["productivity_score"] = 0.0
@@ -281,6 +284,7 @@ class DataAggregator:
             emp["total_active_seconds"] += interval
             if "youtube" in (url or "").lower() or "youtube" in win_title.lower():
                 emp["youtube_seconds"] += interval
+                emp["youtube_alert_timer"] += interval
             emp["unproductive_seconds"] += interval
         elif category == "CORE_WORK":
             status = "ACTIVE"
@@ -314,19 +318,31 @@ class DataAggregator:
             emp["productivity_score"] = round((prod_seconds / total_active) * 100, 1)
 
         # Check for alert trigger (> 30 min continuous YouTube)
-        if emp["youtube_seconds"] > 20 and not any(a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" and not a.get("is_resolved", False) for a in self.alerts):
-            secs_total = emp["youtube_seconds"]
-            duration_str = f"{secs_total} secs" if secs_total < 60 else f"{round(secs_total/60)} mins"
-            self.alerts.insert(0, {
-                "id": str(uuid.uuid4()),
-                "employee_code": email,
-                "employee_name": emp["full_name"],
-                "alert_type": "EXCESSIVE_ENTERTAINMENT",
-                "message": f"Excessive YouTube activity detected: {duration_str} total.",
-                "severity": "HIGH",
-                "timestamp": now_iso,
-                "is_resolved": False
-            })
+        unresolved_alert = next((a for a in self.alerts if a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" and not a.get("is_resolved", False)), None)
+        
+        secs_total = emp["youtube_seconds"]
+        if secs_total < 60:
+            duration_str = f"{secs_total} seconds"
+        else:
+            duration_str = f"{secs_total // 60}m {secs_total % 60}s"
+            
+        message_text = f"Excessive YouTube activity detected: {duration_str} total today."
+
+        if emp["youtube_alert_timer"] > 20:
+            if not unresolved_alert:
+                self.alerts.insert(0, {
+                    "id": str(uuid.uuid4()),
+                    "employee_code": email,
+                    "employee_name": emp["full_name"],
+                    "alert_type": "EXCESSIVE_ENTERTAINMENT",
+                    "message": message_text,
+                    "severity": "HIGH",
+                    "timestamp": now_iso,
+                    "is_resolved": False
+                })
+            else:
+                # Update existing alert message with latest accumulated time
+                unresolved_alert["message"] = message_text
 
         # Append to log history
         log_entry = {
