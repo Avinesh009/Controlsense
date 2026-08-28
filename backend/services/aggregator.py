@@ -315,12 +315,14 @@ class DataAggregator:
 
         # Check for alert trigger (> 30 min continuous YouTube)
         if emp["youtube_seconds"] > 20 and not any(a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" and not a.get("is_resolved", False) for a in self.alerts):
+            secs_total = emp["youtube_seconds"]
+            duration_str = f"{secs_total} secs" if secs_total < 60 else f"{round(secs_total/60)} mins"
             self.alerts.insert(0, {
                 "id": str(uuid.uuid4()),
                 "employee_code": email,
                 "employee_name": emp["full_name"],
                 "alert_type": "EXCESSIVE_ENTERTAINMENT",
-                "message": f"Excessive YouTube activity detected: {round(emp['youtube_seconds']/60)} mins total.",
+                "message": f"Excessive YouTube activity detected: {duration_str} total.",
                 "severity": "HIGH",
                 "timestamp": now_iso,
                 "is_resolved": False
