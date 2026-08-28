@@ -1,9 +1,5 @@
-const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const devPort = window.location.port === '5173';
-
-const API_BASE_URL = isLocalDev && devPort
-  ? 'http://127.0.0.1:8000/api'
-  : `${window.location.origin}/api`;
+const VITE_API_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = VITE_API_URL ? `${VITE_API_URL}/api` : 'http://127.0.0.1:8000/api';
 const TOKEN_KEY = 'emt_admin_token';
 
 export function getToken() {

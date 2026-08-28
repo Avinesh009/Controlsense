@@ -1,12 +1,13 @@
 import { getToken } from './auth';
 
-const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const devPort = window.location.port === '5173';
+const VITE_API_URL = import.meta.env.VITE_API_URL || '';
+let WS_BASE_URL = 'ws://127.0.0.1:8000/ws/live';
 
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_BASE_URL = isLocalDev && devPort
-  ? 'ws://127.0.0.1:8000/ws/live'
-  : `${protocol}//${window.location.host}/ws/live`;
+if (VITE_API_URL) {
+  const protocol = VITE_API_URL.startsWith('https') ? 'wss:' : 'ws:';
+  const host = VITE_API_URL.replace(/^https?:\/\//, '');
+  WS_BASE_URL = `${protocol}//${host}/ws/live`;
+}
 
 class RealtimeHub {
   constructor() {
