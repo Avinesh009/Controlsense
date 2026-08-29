@@ -323,13 +323,21 @@ def get_employee_raw_logs(
     date: str = None, 
     admin: str = Depends(auth_module.get_current_admin)
 ):
-    """Fetches raw activity logs for a specific employee on a given date."""
+    """Fetches raw activity logs for a specific employee on a given date, parsing key shift milestones."""
     from services.aggregator import supabase_client
     from datetime import datetime
     
     if supabase_client is None:
         # Mock data for local testing when Supabase is disconnected
-        return [
+        mock_events = [
+            {"event": "Shift Started (Login)", "time": "09:01:22 AM", "type": "LOGIN"},
+            {"event": "Went on Lunch / Break", "time": "01:00:15 PM", "type": "BREAK_START"},
+            {"event": "Resumed Work from Break", "time": "01:30:10 PM", "type": "BREAK_END"},
+            {"event": "Screen Locked (Away)", "time": "03:00:05 PM", "type": "LOCK"},
+            {"event": "Screen Unlocked (Returned)", "time": "03:30:08 PM", "type": "UNLOCK"},
+            {"event": "Shift Ended (Logout)", "time": "07:00:00 PM", "type": "LOGOUT"}
+        ]
+        mock_raw = [
             {
                 "timestamp": f"{date or '2026-08-29'}T10:15:00Z",
                 "process_name": "excel.exe",
@@ -352,6 +360,10 @@ def get_employee_raw_logs(
                 "duration_seconds": 30
             }
         ]
+        return {
+            "shift_events": mock_events,
+            "raw_logs": mock_raw
+        }
         
     try:
         # 1. Fetch employee ID from email
@@ -373,7 +385,7 @@ def get_employee_raw_logs(
             .gte("recorded_at", start_time)
             .lte("recorded_at", end_time)
             .order("recorded_at", desc=True)
-            .limit(300)
+            .limit(500)  # Fetch up to 500 rows to ensure we capture all daily events
             .execute()
         )
         
@@ -390,7 +402,46 @@ def get_employee_raw_logs(
                 "is_idle": log["is_idle"],
                 "duration_seconds": log["duration_seconds"]
             })
-        return result
+            
+        # 5. Extract transition milestones chronologically (oldest first)
+        db_logs_sorted = sorted(db_logs, key=lambda x: x["recorded_at"])
+        shift_events = []
+        if db_logs_sorted:
+            # Login Event
+            first_log = db_logs_sorted[0]
+            first_time = datetime.fromisoformat(first_log["recorded_at"].replace("Z", "+00:00")).astimezone().strftime("%I:%M:%S %p")
+            shift_events.append({"event": "Shift Started (Login)", "time": first_time, "type": "LOGIN"})
+            
+            last_state = first_log["process_name"]
+            
+            for log in db_logs_sorted[1:]:
+                current_state = log["process_name"]
+                if current_state != last_state:
+                    log_time = datetime.fromisoformat(log["recorded_at"].replace("Z", "+00:00")).astimezone().strftime("%I:%M:%S %p")
+                    
+                    if current_state == "Lunch Break":
+                        shift_events.append({"event": "Went on Lunch / Break", "time": log_time, "type": "BREAK_START"})
+                    elif last_state == "Lunch Break":
+                        shift_events.append({"event": "Resumed Work from Break", "time": log_time, "type": "BREAK_END"})
+                    elif current_state == "Screen Locked":
+                        shift_events.append({"event": "Screen Locked (Away)", "time": log_time, "type": "LOCK"})
+                    elif last_state == "Screen Locked":
+                        shift_events.append({"event": "Screen Unlocked (Returned)", "time": log_time, "type": "UNLOCK"})
+                    
+                    last_state = current_state
+            
+            # Logout Event (check if the last event is a logout, otherwise mark last telemetry check-in)
+            last_log = db_logs_sorted[-1]
+            last_time = datetime.fromisoformat(last_log["recorded_at"].replace("Z", "+00:00")).astimezone().strftime("%I:%M:%S %p")
+            if last_log["process_name"] == "Logout":
+                shift_events.append({"event": "Shift Ended (Logout)", "time": last_time, "type": "LOGOUT"})
+            else:
+                shift_events.append({"event": "Last Active Check-in", "time": last_time, "type": "DISCONNECT"})
+                
+        return {
+            "shift_events": shift_events,
+            "raw_logs": result
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {e}")

@@ -18,7 +18,20 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activityLogs, setActivityLogs] = useState([]);
+  const [shiftEvents, setShiftEvents] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+
+  const getPastDates = () => {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().split('T')[0];
+      const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      dates.push({ value: iso, label });
+    }
+    return dates;
+  };
 
   useEffect(() => {
     async function load() {
@@ -40,8 +53,9 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
     async function loadLogs() {
       if (emp?.email) {
         setLoadingLogs(true);
-        const logs = await fetchEmployeeRawLogs(emp.email, selectedDate);
-        setActivityLogs(logs || []);
+        const res = await fetchEmployeeRawLogs(emp.email, selectedDate);
+        setActivityLogs(res?.raw_logs || []);
+        setShiftEvents(res?.shift_events || []);
         setLoadingLogs(false);
       }
     }
@@ -236,55 +250,93 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
               </div>
 
               {/* Detailed Activity Logs Auditor */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
                     <Activity className="w-4 h-4 text-sky-400" />
                     <span>Detailed Activity History Trail</span>
                   </div>
-                  <input
-                    type="date"
+                  <select
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
-                  />
+                    className="bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono cursor-pointer"
+                  >
+                    {getPastDates().map((d) => (
+                      <option key={d.value} value={d.value}>{d.label}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {loadingLogs ? (
-                  <div className="py-6 text-center text-slate-400 text-xs flex items-center justify-center space-x-2 bg-dark-900 rounded-2xl border border-slate-800">
+                  <div className="py-8 text-center text-slate-400 text-xs flex items-center justify-center space-x-2 bg-dark-900 rounded-2xl border border-slate-800">
                     <RefreshCw className="w-4 h-4 animate-spin text-sky-400" />
                     <span>Loading past activity logs...</span>
                   </div>
-                ) : activityLogs.length === 0 ? (
-                  <div className="p-4 text-center text-slate-500 text-xs italic bg-dark-900 rounded-2xl border border-slate-800">
-                    No activity logs recorded on this date.
-                  </div>
                 ) : (
-                  <div className="p-3 bg-dark-900 rounded-2xl border border-slate-800 space-y-2 max-h-60 overflow-y-auto text-xs font-mono">
-                    {activityLogs.map((log, idx) => {
-                      const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                      const catColors = {
-                        CORE_WORK: 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20',
-                        PRODUCTIVE: 'text-sky-400 bg-sky-500/10 border border-sky-500/20',
-                        ENTERTAINMENT: 'text-rose-400 bg-rose-500/10 border border-rose-500/20',
-                        NEUTRAL: 'text-slate-400 bg-slate-500/10 border border-slate-500/20'
-                      };
-                      return (
-                        <div key={idx} className="p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 hover:border-slate-700/50 transition-all flex flex-col space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span className="text-slate-500 font-semibold">{timeStr}</span>
-                            <span className="font-semibold text-sky-400">{log.process_name}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${catColors[log.category] || catColors.NEUTRAL}`}>
-                              {log.category === 'CORE_WORK' ? 'CORE' : log.category}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-slate-300 break-words leading-relaxed font-sans">
-                            {log.window_title || 'Active Window'}
-                          </div>
+                  <>
+                    {/* Shift Events Milestones Timeline */}
+                    {shiftEvents.length > 0 && (
+                      <div className="p-4 bg-dark-900 rounded-2xl border border-slate-800 space-y-4">
+                        <div className="text-[10px] text-slate-500 uppercase font-mono tracking-wider">Shift Milestones Timeline</div>
+                        <div className="relative border-l border-slate-800 ml-2.5 pl-5 space-y-4 text-xs font-mono">
+                          {shiftEvents.map((evt, idx) => {
+                            const dotColors = {
+                              LOGIN: 'bg-emerald-500 ring-emerald-500/20',
+                              LOGOUT: 'bg-rose-500 ring-rose-500/20',
+                              BREAK_START: 'bg-amber-500 ring-amber-500/20',
+                              BREAK_END: 'bg-emerald-400 ring-emerald-400/20',
+                              LOCK: 'bg-amber-600 ring-amber-600/20',
+                              UNLOCK: 'bg-teal-400 ring-teal-400/20',
+                              DISCONNECT: 'bg-slate-500 ring-slate-500/20'
+                            };
+                            return (
+                              <div key={idx} className="relative flex items-center justify-between">
+                                <span className={`absolute -left-[26px] w-2.5 h-2.5 rounded-full ring-4 ${dotColors[evt.type] || 'bg-slate-400'}`}></span>
+                                <span className="text-slate-200 font-sans font-medium">{evt.event}</span>
+                                <span className="text-slate-400 text-[11px] font-semibold">{evt.time}</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    )}
+
+                    {/* Raw Application Logs Trail */}
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-mono tracking-wider mb-2">Raw Application Log Trail</div>
+                      {activityLogs.length === 0 ? (
+                        <div className="p-4 text-center text-slate-500 text-xs italic bg-dark-900 rounded-2xl border border-slate-800">
+                          No activity logs recorded on this date.
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-dark-900 rounded-2xl border border-slate-800 space-y-2 max-h-60 overflow-y-auto text-xs font-mono">
+                          {activityLogs.map((log, idx) => {
+                            const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            const catColors = {
+                              CORE_WORK: 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20',
+                              PRODUCTIVE: 'text-sky-400 bg-sky-500/10 border border-sky-500/20',
+                              ENTERTAINMENT: 'text-rose-400 bg-rose-500/10 border border-rose-500/20',
+                              NEUTRAL: 'text-slate-400 bg-slate-500/10 border border-slate-500/20'
+                            };
+                            return (
+                              <div key={idx} className="p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 hover:border-slate-700/50 transition-all flex flex-col space-y-1.5">
+                                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                                  <span className="text-slate-500 font-semibold">{timeStr}</span>
+                                  <span className="font-semibold text-sky-400">{log.process_name}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${catColors[log.category] || catColors.NEUTRAL}`}>
+                                    {log.category === 'CORE_WORK' ? 'CORE' : log.category}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-300 break-words leading-relaxed font-sans">
+                                  {log.window_title || 'Active Window'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </>
