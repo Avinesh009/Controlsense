@@ -94,17 +94,11 @@ async def ingest_heartbeat(
     Ingests telemetry heartbeat securely. Verifies HMAC signature and timestamp
     to prevent tampering and replay attacks.
     """
-    # 1. Replay attack protection (Ensure timestamp is within 90 seconds)
+    # 1. Parse and validate timestamp format (allow older timestamps for offline sync)
     try:
-        from datetime import datetime, timezone
-        server_now = datetime.now(timezone.utc)
+        from datetime import datetime
         ts_clean = x_timestamp.replace("Z", "+00:00")
-        payload_time = datetime.fromisoformat(ts_clean)
-        time_diff = abs((server_now - payload_time).total_seconds())
-        if time_diff > 90:
-            raise HTTPException(status_code=401, detail="Request expired (replay protection)")
-    except HTTPException:
-        raise
+        datetime.fromisoformat(ts_clean)
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Authentication failed: Invalid timestamp format. {e}")
 

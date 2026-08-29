@@ -27,7 +27,8 @@ class EmployeeMonitoringAgent:
         
         self.window_tracker = WindowTracker()
         self.idle_tracker = IdleTracker(idle_threshold_seconds=self.config.get("idle_threshold_seconds", 180))
-        self.cache = OfflineBuffer()
+        db_path = os.path.join(appdata_dir, "agent_cache.db")
+        self.cache = OfflineBuffer(db_path=db_path)
         
         # State tracking
         self.is_tracking = False
