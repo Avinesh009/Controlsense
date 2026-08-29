@@ -29,6 +29,21 @@ class ActivityClassifier:
     def __init__(self, rules=None):
         self.rules = rules or DEFAULT_RULES
 
+    def reload_rules_from_supabase(self, supabase):
+        if supabase is None:
+            self.rules = DEFAULT_RULES
+            return
+        try:
+            res = supabase.table("classifier_rules").select("*").order("created_at", desc=False).execute()
+            if res.data:
+                self.rules = res.data
+                print(f"Loaded {len(self.rules)} classification rules from Supabase.")
+            else:
+                self.rules = DEFAULT_RULES
+        except Exception as e:
+            print(f"Could not load rules from Supabase (falling back to defaults): {e}")
+            self.rules = DEFAULT_RULES
+
     def classify(self, process_name: str, window_title: str, active_url: Optional[str] = None) -> Tuple[str, str, int]:
         """
         Returns: (category, display_name, productivity_weight)

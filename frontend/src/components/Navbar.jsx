@@ -1,7 +1,7 @@
 import React from 'react';
-import { Shield, LogOut } from 'lucide-react';
+import { Shield, LogOut, Settings } from 'lucide-react';
 
-export default function Navbar({ isWsConnected, onLogout }) {
+export default function Navbar({ isWsConnected, onLogout, employees, onSelectEmployee, onOpenRules }) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-dark-900/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,12 +26,42 @@ export default function Navbar({ isWsConnected, onLogout }) {
 
           {/* Realtime Stream Status */}
           <div className="flex items-center space-x-3">
+            {employees && employees.length > 0 && (
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    onSelectEmployee(e.target.value);
+                    e.target.value = ""; // Reset select element to placeholder
+                  }
+                }}
+                className="bg-dark-800 border border-slate-700/60 rounded-xl px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500 cursor-pointer font-medium max-w-[220px]"
+                defaultValue=""
+              >
+                <option value="" disabled>Search Employee History...</option>
+                {employees.map((emp) => (
+                  <option key={emp.employee_code} value={emp.employee_code}>
+                    {emp.full_name} ({emp.role})
+                  </option>
+                ))}
+              </select>
+            )}
+
             <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-dark-800 border border-slate-700/60 text-xs">
               <span className={`w-2.5 h-2.5 rounded-full ${isWsConnected ? 'bg-emerald-500 animate-pulse-fast shadow-glow-emerald' : 'bg-rose-500'}`} />
               <span className="text-slate-300 font-medium hidden sm:inline">
                 {isWsConnected ? 'Realtime Stream Live' : 'Connecting to Server...'}
               </span>
             </div>
+            {onOpenRules && (
+              <button
+                onClick={onOpenRules}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-dark-800 border border-slate-700/60 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Productivity Rules Editor"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden sm:inline">Rules Editor</span>
+              </button>
+            )}
             {onLogout && (
               <button
                 onClick={onLogout}

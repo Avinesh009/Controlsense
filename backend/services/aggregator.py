@@ -62,6 +62,7 @@ class DataAggregator:
                     "shift_end_time": None,
                     "total_active_seconds": 0,
                     "total_idle_seconds": 0,
+                    "total_break_seconds": 0,
                     "control_id_seconds": 0,
                     "youtube_seconds": 0,
                     "youtube_alert_timer": 0,
@@ -106,7 +107,9 @@ class DataAggregator:
                 proc_name = log.get("process_name", "")
                 
                 # Reconstruct time allocations
-                if is_idle:
+                if proc_name == "Lunch Break":
+                    matching_emp["total_break_seconds"] = matching_emp.get("total_break_seconds", 0) + interval
+                elif is_idle:
                     matching_emp["total_idle_seconds"] += interval
                 elif category == "ENTERTAINMENT":
                     matching_emp["total_active_seconds"] += interval
@@ -183,6 +186,7 @@ class DataAggregator:
                 "shift_end_time": None,
                 "total_active_seconds": 0,
                 "total_idle_seconds": 0,
+                "total_break_seconds": 0,
                 "control_id_seconds": 0,
                 "youtube_seconds": 0,
                 "youtube_alert_timer": 0,
@@ -201,6 +205,7 @@ class DataAggregator:
         if last_active and last_active != current_date_str:
             emp["total_active_seconds"] = 0
             emp["total_idle_seconds"] = 0
+            emp["total_break_seconds"] = 0
             emp["control_id_seconds"] = 0
             emp["youtube_seconds"] = 0
             emp["youtube_alert_timer"] = 0
@@ -276,7 +281,10 @@ class DataAggregator:
             }
 
         # Determine live status
-        if is_idle:
+        if proc_name == "Lunch Break":
+            status = "BREAK"
+            emp["total_break_seconds"] = emp.get("total_break_seconds", 0) + interval
+        elif is_idle:
             status = "IDLE"
             emp["total_idle_seconds"] += interval
         elif category == "ENTERTAINMENT":

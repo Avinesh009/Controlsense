@@ -6,6 +6,7 @@ import EmployeeDetailModal from './components/EmployeeDetailModal';
 import KPICards from './components/KPICards';
 import HistoryCharts from './components/HistoryCharts';
 import AlertsPanel from './components/AlertsPanel';
+import RulesSettingsModal from './components/RulesSettingsModal';
 import { X } from 'lucide-react';
 import { fetchEmployees, fetchSummary, fetchAlerts } from './services/api';
 import { realtimeHub } from './services/websocket';
@@ -14,16 +15,19 @@ import { isAuthenticated, logout } from './services/auth';
 export default function App() {
   const [authed, setAuthed] = useState(isAuthenticated());
   const [employees, setEmployees] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
   const [summary, setSummary] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [selectedEmployeeCode, setSelectedEmployeeCode] = useState(null);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
   const handleLogout = useCallback(() => {
     logout();
     realtimeHub.disconnect();
     setEmployees([]);
+    setAllEmployees([]);
     setSummary(null);
     setAlerts([]);
     setAuthed(false);
@@ -45,6 +49,7 @@ export default function App() {
         fetchAlerts(),
       ]);
       setEmployees(emps);
+      setAllEmployees(emps || []);
       setSummary(sum);
       setAlerts(initialAlerts || []);
     }
@@ -67,6 +72,14 @@ export default function App() {
       } else if (message.event === 'HEARTBEAT') {
         const updatedEmp = message.data.employee;
         setEmployees((prev) => {
+          const exists = prev.some((e) => e.employee_code === updatedEmp.employee_code);
+          if (exists) {
+            return prev.map((e) => (e.employee_code === updatedEmp.employee_code ? updatedEmp : e));
+          } else {
+            return [...prev, updatedEmp];
+          }
+        });
+        setAllEmployees((prev) => {
           const exists = prev.some((e) => e.employee_code === updatedEmp.employee_code);
           if (exists) {
             return prev.map((e) => (e.employee_code === updatedEmp.employee_code ? updatedEmp : e));
@@ -99,7 +112,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-dark-900">
-      <Navbar isWsConnected={isWsConnected} onLogout={handleLogout} />
+      <Navbar
+        isWsConnected={isWsConnected}
+        onLogout={handleLogout}
+        employees={allEmployees}
+        onSelectEmployee={setSelectedEmployeeCode}
+        onOpenRules={() => setIsRulesModalOpen(true)}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* KPI Summary Cards */}
@@ -154,6 +173,13 @@ export default function App() {
           employeeCode={selectedEmployeeCode}
           employees={employees}
           onClose={() => setSelectedEmployeeCode(null)}
+        />
+      )}
+
+      {/* Productivity Rules Editor Modal */}
+      {isRulesModalOpen && (
+        <RulesSettingsModal
+          onClose={() => setIsRulesModalOpen(false)}
         />
       )}
     </div>

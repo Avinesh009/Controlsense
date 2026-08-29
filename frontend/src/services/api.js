@@ -78,3 +78,42 @@ export async function fetchEmployeeRawLogs(email, date) {
     return [];
   }
 }
+
+export async function fetchClassifierRules() {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/classifier/rules`);
+    if (!res.ok) throw new Error('Failed to fetch classifier rules');
+    return await res.json();
+  } catch (err) {
+    console.error('API Error:', err);
+    return [];
+  }
+}
+
+export async function saveClassifierRule(rule) {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/classifier/rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rule)
+    });
+    if (!res.ok) throw new Error('Failed to save classifier rule');
+    return await res.json();
+  } catch (err) {
+    console.error('API Error:', err);
+    return null;
+  }
+}
+
+export async function deleteClassifierRule(ruleId) {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/classifier/rules/${ruleId}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete classifier rule');
+    return await res.json();
+  } catch (err) {
+    console.error('API Error:', err);
+    return null;
+  }
+}

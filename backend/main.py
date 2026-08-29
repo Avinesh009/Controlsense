@@ -50,6 +50,11 @@ app = FastAPI(
     description="Enterprise API for real-time employee window tracking, Control ID Tool utilization, YouTube detection, and productivity analytics.",
 )
 
+@app.on_event("startup")
+def on_startup():
+    from services.aggregator import supabase_client
+    classifier.reload_rules_from_supabase(supabase_client)
+
 # Restrict CORS to known dashboard origins (wildcard + credentials is both
 # insecure and rejected by browsers anyway).
 app.add_middleware(
@@ -317,6 +322,75 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         ws_manager.disconnect(websocket)
 
 
+@app.get("/api/classifier/rules")
+def get_rules(admin: str = Depends(auth_module.get_current_admin)):
+    """Returns all current active rules, loading from Supabase if connected."""
+    from services.aggregator import supabase_client
+    if supabase_client:
+        try:
+            res = supabase_client.table("classifier_rules").select("*").order("created_at", desc=False).execute()
+            if res.data:
+                return res.data
+        except Exception:
+            pass
+    return classifier.rules
+
+
+@app.post("/api/classifier/rules")
+def save_rule(rule: dict, admin: str = Depends(auth_module.get_current_admin)):
+    """Saves (inserts/updates) a custom application classification rule."""
+    from services.aggregator import supabase_client
+    if supabase_client:
+        try:
+            payload = {
+                "pattern": rule["pattern"],
+                "match_type": rule["match_type"],
+                "category": rule["category"],
+                "display_name": rule["display_name"],
+                "weight": int(rule["weight"])
+            }
+            if "id" in rule and rule["id"]:
+                supabase_client.table("classifier_rules").update(payload).eq("id", rule["id"]).execute()
+            else:
+                supabase_client.table("classifier_rules").insert(payload).execute()
+            classifier.reload_rules_from_supabase(supabase_client)
+            return {"status": "success"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Mock local edit
+        if "id" in rule and rule["id"]:
+            for idx, r in enumerate(classifier.rules):
+                if str(r.get("id")) == str(rule["id"]):
+                    classifier.rules[idx] = rule
+                    break
+        else:
+            rule["id"] = len(classifier.rules) + 1
+            classifier.rules.append(rule)
+        return {"status": "success"}
+
+
+@app.delete("/api/classifier/rules/{rule_id}")
+def delete_rule(rule_id: str, admin: str = Depends(auth_module.get_current_admin)):
+    """Deletes a custom application classification rule."""
+    from services.aggregator import supabase_client
+    if supabase_client:
+        try:
+            try:
+                id_val = int(rule_id)
+            except ValueError:
+                id_val = rule_id
+            supabase_client.table("classifier_rules").delete().eq("id", id_val).execute()
+            classifier.reload_rules_from_supabase(supabase_client)
+            return {"status": "success"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Mock local delete
+        classifier.rules = [r for r in classifier.rules if str(r.get("id")) != str(rule_id)]
+        return {"status": "success"}
+
+
 @app.get("/api/analytics/logs/{employee_email}")
 def get_employee_raw_logs(
     employee_email: str, 
@@ -330,12 +404,12 @@ def get_employee_raw_logs(
     if supabase_client is None:
         # Mock data for local testing when Supabase is disconnected
         mock_events = [
-            {"event": "Shift Started (Login)", "time": "09:01:22 AM", "type": "LOGIN"},
-            {"event": "Went on Lunch / Break", "time": "01:00:15 PM", "type": "BREAK_START"},
-            {"event": "Resumed Work from Break", "time": "01:30:10 PM", "type": "BREAK_END"},
-            {"event": "Screen Locked (Away)", "time": "03:00:05 PM", "type": "LOCK"},
-            {"event": "Screen Unlocked (Returned)", "time": "03:30:08 PM", "type": "UNLOCK"},
-            {"event": "Shift Ended (Logout)", "time": "07:00:00 PM", "type": "LOGOUT"}
+            {"event": "Shift Started (Login)", "timestamp": f"{date or '2026-08-29'}T09:01:22Z", "type": "LOGIN"},
+            {"event": "Went on Lunch / Break", "timestamp": f"{date or '2026-08-29'}T13:00:15Z", "type": "BREAK_START"},
+            {"event": "Resumed Work from Break", "timestamp": f"{date or '2026-08-29'}T13:30:10Z", "type": "BREAK_END"},
+            {"event": "Screen Locked (Away)", "timestamp": f"{date or '2026-08-29'}T15:00:05Z", "type": "LOCK"},
+            {"event": "Screen Unlocked (Returned)", "timestamp": f"{date or '2026-08-29'}T15:30:08Z", "type": "UNLOCK"},
+            {"event": "Shift Ended (Logout)", "timestamp": f"{date or '2026-08-29'}T19:00:00Z", "type": "LOGOUT"}
         ]
         mock_raw = [
             {
@@ -409,34 +483,30 @@ def get_employee_raw_logs(
         if db_logs_sorted:
             # Login Event
             first_log = db_logs_sorted[0]
-            first_time = datetime.fromisoformat(first_log["recorded_at"].replace("Z", "+00:00")).astimezone().strftime("%I:%M:%S %p")
-            shift_events.append({"event": "Shift Started (Login)", "time": first_time, "type": "LOGIN"})
+            shift_events.append({"event": "Shift Started (Login)", "timestamp": first_log["recorded_at"], "type": "LOGIN"})
             
             last_state = first_log["process_name"]
             
             for log in db_logs_sorted[1:]:
                 current_state = log["process_name"]
                 if current_state != last_state:
-                    log_time = datetime.fromisoformat(log["recorded_at"].replace("Z", "+00:00")).astimezone().strftime("%I:%M:%S %p")
-                    
                     if current_state == "Lunch Break":
-                        shift_events.append({"event": "Went on Lunch / Break", "time": log_time, "type": "BREAK_START"})
+                        shift_events.append({"event": "Went on Lunch / Break", "timestamp": log["recorded_at"], "type": "BREAK_START"})
                     elif last_state == "Lunch Break":
-                        shift_events.append({"event": "Resumed Work from Break", "time": log_time, "type": "BREAK_END"})
+                        shift_events.append({"event": "Resumed Work from Break", "timestamp": log["recorded_at"], "type": "BREAK_END"})
                     elif current_state == "Screen Locked":
-                        shift_events.append({"event": "Screen Locked (Away)", "time": log_time, "type": "LOCK"})
+                        shift_events.append({"event": "Screen Locked (Away)", "timestamp": log["recorded_at"], "type": "LOCK"})
                     elif last_state == "Screen Locked":
-                        shift_events.append({"event": "Screen Unlocked (Returned)", "time": log_time, "type": "UNLOCK"})
+                        shift_events.append({"event": "Screen Unlocked (Returned)", "timestamp": log["recorded_at"], "type": "UNLOCK"})
                     
                     last_state = current_state
             
             # Logout Event (check if the last event is a logout, otherwise mark last telemetry check-in)
             last_log = db_logs_sorted[-1]
-            last_time = datetime.fromisoformat(last_log["recorded_at"].replace("Z", "+00:00")).astimezone().strftime("%I:%M:%S %p")
             if last_log["process_name"] == "Logout":
-                shift_events.append({"event": "Shift Ended (Logout)", "time": last_time, "type": "LOGOUT"})
+                shift_events.append({"event": "Shift Ended (Logout)", "timestamp": last_log["recorded_at"], "type": "LOGOUT"})
             else:
-                shift_events.append({"event": "Last Active Check-in", "time": last_time, "type": "DISCONNECT"})
+                shift_events.append({"event": "Last Active Check-in", "timestamp": last_log["recorded_at"], "type": "DISCONNECT"})
                 
         return {
             "shift_events": shift_events,

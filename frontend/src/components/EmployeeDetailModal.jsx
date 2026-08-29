@@ -74,6 +74,15 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   // Sort applications by duration descending
   const sortedApps = Object.entries(appDurations).sort((a, b) => b[1] - a[1]);
 
+  const selectedDayTotalSeconds = activityLogs.reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
+  const selectedDayBreakSeconds = activityLogs
+    .filter((log) => log.process_name === 'Lunch Break')
+    .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
+  const selectedDayIdleSeconds = activityLogs
+    .filter((log) => log.is_idle && log.process_name !== 'Lunch Break')
+    .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
+  const selectedDayWorkSeconds = Math.max(0, selectedDayTotalSeconds - selectedDayBreakSeconds - selectedDayIdleSeconds);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
       <div className="glass-card w-full max-w-lg rounded-3xl border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col">
@@ -88,7 +97,21 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                 {emp?.full_name || 'Employee Details'}
               </h3>
               <p className="text-[11px] font-mono text-slate-400 leading-none mt-0.5">{emp?.email}</p>
-              <p className="text-xs text-slate-400 mt-1.5">{emp?.role}</p>
+              <div className="flex items-center space-x-2 mt-1.5 text-xs">
+                <span className="text-slate-400">{emp?.role}</span>
+                {activityLogs.length > 0 && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-emerald-400 font-semibold font-mono" title="Total hours active in session">
+                      Session: {formatDuration(selectedDayTotalSeconds)}
+                    </span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-sky-400 font-semibold font-mono" title="Actual time worked (excluding breaks/idle)">
+                      Worked: {formatDuration(selectedDayWorkSeconds)}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -234,6 +257,14 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                   <div className="text-slate-300 text-right font-mono font-semibold">
                     {formatDuration(totalSessionSeconds)}
                   </div>
+                  <div className="text-slate-400">Authorized Lunch / Break:</div>
+                  <div className="text-slate-300 text-right font-mono font-semibold text-amber-500">
+                    {formatDuration(emp?.total_break_seconds || 0)}
+                  </div>
+                  <div className="text-slate-400">Unproductive Idle Time:</div>
+                  <div className="text-slate-300 text-right font-mono font-semibold text-amber-600/80">
+                    {formatDuration(emp?.total_idle_seconds || 0)}
+                  </div>
                   <div className="text-slate-400">Shift Started (Login):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-emerald-400">
                     {emp?.shift_start_time ? new Date(emp.shift_start_time).toLocaleTimeString() : 'N/A'}
@@ -243,7 +274,7 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                     {emp?.shift_end_time ? new Date(emp.shift_end_time).toLocaleTimeString() : 'Active Now / Offline'}
                   </div>
                   <div className="text-slate-400">Last Reported Check-in:</div>
-                  <div className="text-slate-300 text-right font-mono">
+                  <div className="text-slate-300 text-right font-mono text-slate-400">
                     {emp?.last_heartbeat ? new Date(emp.last_heartbeat).toLocaleTimeString() : 'N/A'}
                   </div>
                 </div>
@@ -293,7 +324,9 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                               <div key={idx} className="relative flex items-center justify-between">
                                 <span className={`absolute -left-[26px] w-2.5 h-2.5 rounded-full ring-4 ${dotColors[evt.type] || 'bg-slate-400'}`}></span>
                                 <span className="text-slate-200 font-sans font-medium">{evt.event}</span>
-                                <span className="text-slate-400 text-[11px] font-semibold">{evt.time}</span>
+                                <span className="text-slate-400 text-[11px] font-semibold">
+                                  {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : (evt.time || 'N/A')}
+                                </span>
                               </div>
                             );
                           })}
