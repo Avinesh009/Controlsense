@@ -124,8 +124,16 @@ class EmployeeMonitoringAgent:
                     self.update_gui_activity("Lunch Break", "Active tracking paused")
                 else:
                     # Standard active tracking
-                    win_info = self.window_tracker.get_active_window()
-                    is_idle, idle_secs = self.idle_tracker.is_user_idle()
+                    if self.is_workstation_locked():
+                        win_info = {
+                            "process_name": "Screen Locked",
+                            "window_title": "Workstation Locked / Screen Off"
+                        }
+                        is_idle = True
+                        idle_secs = interval
+                    else:
+                        win_info = self.window_tracker.get_active_window()
+                        is_idle, idle_secs = self.idle_tracker.is_user_idle()
 
                     payload = {
                         "full_name": self.employee_name,
@@ -451,6 +459,19 @@ class EmployeeMonitoringAgent:
                 self.shutdown_agent()
         else:
             self.shutdown_agent()
+
+    def is_workstation_locked(self) -> bool:
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            # OpenInputDesktop returns 0 if the screen is locked, screensaver is running, or secure desktop is active.
+            h_desk = user32.OpenInputDesktop(0, False, 0x0001) # DESKTOP_CREATEMENU
+            if h_desk:
+                user32.CloseDesktop(h_desk)
+                return False
+            return True
+        except Exception:
+            return False
 
     def update_gui_activity(self, app_name, title_text):
         if self.root and self.activity_label:

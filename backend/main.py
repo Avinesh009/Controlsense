@@ -317,6 +317,85 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         ws_manager.disconnect(websocket)
 
 
+@app.get("/api/analytics/logs/{employee_email}")
+def get_employee_raw_logs(
+    employee_email: str, 
+    date: str = None, 
+    admin: str = Depends(auth_module.get_current_admin)
+):
+    """Fetches raw activity logs for a specific employee on a given date."""
+    from services.aggregator import supabase_client
+    from datetime import datetime
+    
+    if supabase_client is None:
+        # Mock data for local testing when Supabase is disconnected
+        return [
+            {
+                "timestamp": f"{date or '2026-08-29'}T10:15:00Z",
+                "process_name": "excel.exe",
+                "window_title": "Apparel BOM spec - Excel",
+                "category": "PRODUCTIVE",
+                "duration_seconds": 15
+            },
+            {
+                "timestamp": f"{date or '2026-08-29'}T10:16:30Z",
+                "process_name": "chrome.exe",
+                "window_title": "Shopify Admin Dashboard",
+                "category": "PRODUCTIVE",
+                "duration_seconds": 45
+            },
+            {
+                "timestamp": f"{date or '2026-08-29'}T10:20:00Z",
+                "process_name": "YouTube",
+                "window_title": "Music Video - YouTube",
+                "category": "ENTERTAINMENT",
+                "duration_seconds": 30
+            }
+        ]
+        
+    try:
+        # 1. Fetch employee ID from email
+        emp_res = supabase_client.table("employees").select("id").eq("email", employee_email).execute()
+        if not emp_res.data:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        emp_id = emp_res.data[0]["id"]
+        
+        # 2. Parse date range (start of day to end of day)
+        target_date_str = date or datetime.utcnow().date().isoformat()
+        start_time = f"{target_date_str}T00:00:00Z"
+        end_time = f"{target_date_str}T23:59:59Z"
+        
+        # 3. Query activity_logs table
+        logs_res = (
+            supabase_client.table("activity_logs")
+            .select("recorded_at, process_name, window_title, domain_url, category, is_idle, duration_seconds")
+            .eq("employee_id", emp_id)
+            .gte("recorded_at", start_time)
+            .lte("recorded_at", end_time)
+            .order("recorded_at", desc=True)
+            .limit(300)
+            .execute()
+        )
+        
+        db_logs = logs_res.data if hasattr(logs_res, "data") else []
+        
+        # 4. Map DB fields to return format
+        result = []
+        for log in db_logs:
+            result.append({
+                "timestamp": log["recorded_at"],
+                "process_name": log["process_name"] or "Unknown",
+                "window_title": log["window_title"] or "N/A",
+                "category": log["category"],
+                "is_idle": log["is_idle"],
+                "duration_seconds": log["duration_seconds"]
+            })
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch logs: {e}")
+
+
 # ---------------------------------------------------------------------------
 # Serve static frontend files (Vite build)
 # ---------------------------------------------------------------------------

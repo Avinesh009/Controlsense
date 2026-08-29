@@ -67,3 +67,14 @@ export async function fetchHistory() {
     return [];
   }
 }
+
+export async function fetchEmployeeRawLogs(email, date) {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/analytics/logs/${email}?date=${date}`);
+    if (!res.ok) throw new Error('Failed to fetch raw activity logs');
+    return await res.json();
+  } catch (err) {
+    console.error('API Error:', err);
+    return [];
+  }
+}

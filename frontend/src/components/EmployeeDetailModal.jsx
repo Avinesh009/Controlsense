@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, ShieldCheck, PlayCircle, Monitor, RefreshCw, Cpu, Server, Activity } from 'lucide-react';
-import { fetchEmployeeDetail } from '../services/api';
+import { fetchEmployeeDetail, fetchEmployeeRawLogs } from '../services/api';
 
 function formatDuration(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600);
@@ -15,6 +15,10 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState('daily');
+  
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -28,13 +32,26 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
     }
   }, [employeeCode, range]);
 
+  const emp = range === 'daily' 
+    ? (employees?.find((e) => e.employee_code === employeeCode) || data?.employee) 
+    : data?.employee;
+
+  useEffect(() => {
+    async function loadLogs() {
+      if (emp?.email) {
+        setLoadingLogs(true);
+        const logs = await fetchEmployeeRawLogs(emp.email, selectedDate);
+        setActivityLogs(logs || []);
+        setLoadingLogs(false);
+      }
+    }
+    loadLogs();
+  }, [emp?.email, selectedDate]);
+
   if (!employeeCode) return null;
 
   // Reactively track the employee if they are currently online and we are looking at today's stats,
   // otherwise fallback to the historical aggregated data returned by the backend API.
-  const emp = range === 'daily' 
-    ? (employees?.find((e) => e.employee_code === employeeCode) || data?.employee) 
-    : data?.employee;
   const appDurations = emp?.app_durations || {};
 
   // Calculate total seconds logged to compute percentages
@@ -216,6 +233,59 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                     {emp?.last_heartbeat ? new Date(emp.last_heartbeat).toLocaleTimeString() : 'N/A'}
                   </div>
                 </div>
+              </div>
+
+              {/* Detailed Activity Logs Auditor */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                    <Activity className="w-4 h-4 text-sky-400" />
+                    <span>Detailed Activity History Trail</span>
+                  </div>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+
+                {loadingLogs ? (
+                  <div className="py-6 text-center text-slate-400 text-xs flex items-center justify-center space-x-2 bg-dark-900 rounded-2xl border border-slate-800">
+                    <RefreshCw className="w-4 h-4 animate-spin text-sky-400" />
+                    <span>Loading past activity logs...</span>
+                  </div>
+                ) : activityLogs.length === 0 ? (
+                  <div className="p-4 text-center text-slate-500 text-xs italic bg-dark-900 rounded-2xl border border-slate-800">
+                    No activity logs recorded on this date.
+                  </div>
+                ) : (
+                  <div className="p-3 bg-dark-900 rounded-2xl border border-slate-800 space-y-2 max-h-60 overflow-y-auto text-xs font-mono">
+                    {activityLogs.map((log, idx) => {
+                      const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                      const catColors = {
+                        CORE_WORK: 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20',
+                        PRODUCTIVE: 'text-sky-400 bg-sky-500/10 border border-sky-500/20',
+                        ENTERTAINMENT: 'text-rose-400 bg-rose-500/10 border border-rose-500/20',
+                        NEUTRAL: 'text-slate-400 bg-slate-500/10 border border-slate-500/20'
+                      };
+                      return (
+                        <div key={idx} className="p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 hover:border-slate-700/50 transition-all flex flex-col space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span className="text-slate-500 font-semibold">{timeStr}</span>
+                            <span className="font-semibold text-sky-400">{log.process_name}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${catColors[log.category] || catColors.NEUTRAL}`}>
+                              {log.category === 'CORE_WORK' ? 'CORE' : log.category}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-300 break-words leading-relaxed font-sans">
+                            {log.window_title || 'Active Window'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           )}
