@@ -110,7 +110,7 @@ class DataAggregator:
                 # Reconstruct time allocations
                 if proc_name == "Lunch Break":
                     matching_emp["total_break_seconds"] = matching_emp.get("total_break_seconds", 0) + interval
-                elif proc_name == "Screen Locked":
+                elif proc_name in ["Screen Locked", "LockApp.exe", "logonui.exe", "LockApp", "logonui"]:
                     matching_emp["total_away_seconds"] = matching_emp.get("total_away_seconds", 0) + interval
                 elif is_idle:
                     matching_emp["total_idle_seconds"] += interval
@@ -289,7 +289,7 @@ class DataAggregator:
         if proc_name == "Lunch Break":
             status = "BREAK"
             emp["total_break_seconds"] = emp.get("total_break_seconds", 0) + interval
-        elif proc_name == "Screen Locked":
+        elif proc_name in ["Screen Locked", "LockApp.exe", "logonui.exe", "LockApp", "logonui"]:
             status = "AWAY"
             emp["total_away_seconds"] = emp.get("total_away_seconds", 0) + interval
         elif is_idle:

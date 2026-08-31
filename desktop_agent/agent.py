@@ -125,7 +125,11 @@ class EmployeeMonitoringAgent:
                     self.update_gui_activity("Lunch Break", "Active tracking paused")
                 else:
                     # Standard active tracking
-                    if self.is_workstation_locked():
+                    # Always get the active window first to check for Windows UWP LockApp or LogonUI
+                    win_info = self.window_tracker.get_active_window()
+                    proc_lower = (win_info.get("process_name") or "").lower()
+
+                    if self.is_workstation_locked() or proc_lower in ["lockapp.exe", "logonui.exe"]:
                         win_info = {
                             "process_name": "Screen Locked",
                             "window_title": "Workstation Locked / Screen Off"
@@ -133,7 +137,6 @@ class EmployeeMonitoringAgent:
                         is_idle = True
                         idle_secs = interval
                     else:
-                        win_info = self.window_tracker.get_active_window()
                         is_idle, idle_secs = self.idle_tracker.is_user_idle()
 
                     payload = {
