@@ -63,6 +63,7 @@ class DataAggregator:
                     "total_active_seconds": 0,
                     "total_idle_seconds": 0,
                     "total_break_seconds": 0,
+                    "total_away_seconds": 0,
                     "control_id_seconds": 0,
                     "youtube_seconds": 0,
                     "youtube_alert_timer": 0,
@@ -109,6 +110,8 @@ class DataAggregator:
                 # Reconstruct time allocations
                 if proc_name == "Lunch Break":
                     matching_emp["total_break_seconds"] = matching_emp.get("total_break_seconds", 0) + interval
+                elif proc_name == "Screen Locked":
+                    matching_emp["total_away_seconds"] = matching_emp.get("total_away_seconds", 0) + interval
                 elif is_idle:
                     matching_emp["total_idle_seconds"] += interval
                 elif category == "ENTERTAINMENT":
@@ -187,6 +190,7 @@ class DataAggregator:
                 "total_active_seconds": 0,
                 "total_idle_seconds": 0,
                 "total_break_seconds": 0,
+                "total_away_seconds": 0,
                 "control_id_seconds": 0,
                 "youtube_seconds": 0,
                 "youtube_alert_timer": 0,
@@ -206,6 +210,7 @@ class DataAggregator:
             emp["total_active_seconds"] = 0
             emp["total_idle_seconds"] = 0
             emp["total_break_seconds"] = 0
+            emp["total_away_seconds"] = 0
             emp["control_id_seconds"] = 0
             emp["youtube_seconds"] = 0
             emp["youtube_alert_timer"] = 0
@@ -284,6 +289,9 @@ class DataAggregator:
         if proc_name == "Lunch Break":
             status = "BREAK"
             emp["total_break_seconds"] = emp.get("total_break_seconds", 0) + interval
+        elif proc_name == "Screen Locked":
+            status = "AWAY"
+            emp["total_away_seconds"] = emp.get("total_away_seconds", 0) + interval
         elif is_idle:
             status = "IDLE"
             emp["total_idle_seconds"] += interval

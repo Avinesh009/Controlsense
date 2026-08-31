@@ -78,10 +78,26 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const selectedDayBreakSeconds = activityLogs
     .filter((log) => log.process_name === 'Lunch Break')
     .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
-  const selectedDayIdleSeconds = activityLogs
-    .filter((log) => log.is_idle && log.process_name !== 'Lunch Break')
+  const selectedDayAwaySeconds = activityLogs
+    .filter((log) => log.process_name === 'Screen Locked')
     .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
-  const selectedDayWorkSeconds = Math.max(0, selectedDayTotalSeconds - selectedDayBreakSeconds - selectedDayIdleSeconds);
+  const selectedDayIdleSeconds = activityLogs
+    .filter((log) => log.is_idle && log.process_name !== 'Lunch Break' && log.process_name !== 'Screen Locked')
+    .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
+  const selectedDayWorkSeconds = Math.max(0, selectedDayTotalSeconds - selectedDayBreakSeconds - selectedDayAwaySeconds - selectedDayIdleSeconds);
+
+  // Check if today is selected to bind the header stats to live real-time values instead of static log list
+  const isTodaySelected = selectedDate === new Date().toISOString().split('T')[0];
+  const liveIdleSeconds = emp?.total_idle_seconds || 0;
+  const liveBreakSeconds = emp?.total_break_seconds || 0;
+  const liveAwaySeconds = emp?.total_away_seconds || 0;
+  const liveWorkSeconds = Math.max(0, totalSessionSeconds - liveBreakSeconds - liveIdleSeconds - liveAwaySeconds);
+
+  const displayTotalSeconds = isTodaySelected ? totalSessionSeconds : selectedDayTotalSeconds;
+  const displayWorkSeconds = isTodaySelected ? liveWorkSeconds : selectedDayWorkSeconds;
+  const displayBreakSeconds = isTodaySelected ? liveBreakSeconds : selectedDayBreakSeconds;
+  const displayAwaySeconds = isTodaySelected ? liveAwaySeconds : selectedDayAwaySeconds;
+  const displayIdleSeconds = isTodaySelected ? liveIdleSeconds : selectedDayIdleSeconds;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
@@ -99,15 +115,15 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
               <p className="text-[11px] font-mono text-slate-400 leading-none mt-0.5">{emp?.email}</p>
               <div className="flex items-center space-x-2 mt-1.5 text-xs">
                 <span className="text-slate-400">{emp?.role}</span>
-                {activityLogs.length > 0 && (
+                {(isTodaySelected || activityLogs.length > 0) && (
                   <>
                     <span className="text-slate-600">•</span>
                     <span className="text-emerald-400 font-semibold font-mono" title="Total hours active in session">
-                      Session: {formatDuration(selectedDayTotalSeconds)}
+                      Session: {formatDuration(displayTotalSeconds)}
                     </span>
                     <span className="text-slate-600">•</span>
                     <span className="text-sky-400 font-semibold font-mono" title="Actual time worked (excluding breaks/idle)">
-                      Worked: {formatDuration(selectedDayWorkSeconds)}
+                      Worked: {formatDuration(displayWorkSeconds)}
                     </span>
                   </>
                 )}
@@ -255,15 +271,19 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                 <div className="grid grid-cols-2 gap-y-2 text-xs">
                   <div className="text-slate-400">Total Connected Session Time:</div>
                   <div className="text-slate-300 text-right font-mono font-semibold">
-                    {formatDuration(totalSessionSeconds)}
+                    {formatDuration(displayTotalSeconds)}
                   </div>
                   <div className="text-slate-400">Authorized Lunch / Break:</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-amber-500">
-                    {formatDuration(emp?.total_break_seconds || 0)}
+                    {formatDuration(displayBreakSeconds)}
                   </div>
-                  <div className="text-slate-400">Unproductive Idle Time:</div>
+                  <div className="text-slate-400">Stepped Away (Locked):</div>
+                  <div className="text-slate-300 text-right font-mono font-semibold text-sky-400">
+                    {formatDuration(displayAwaySeconds)}
+                  </div>
+                  <div className="text-slate-400">Unproductive Idle (Unlocked):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-amber-600/80">
-                    {formatDuration(emp?.total_idle_seconds || 0)}
+                    {formatDuration(displayIdleSeconds)}
                   </div>
                   <div className="text-slate-400">Shift Started (Login):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-emerald-400">

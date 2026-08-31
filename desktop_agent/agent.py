@@ -105,6 +105,7 @@ class EmployeeMonitoringAgent:
         logger.info(f"Telemetry tracking thread started for {self.employee_code}")
 
         while self.is_tracking:
+            start_time = time.time()
             try:
                 if self.on_break:
                     # During lunch/break, send structured break heartbeat (privacy safe)
@@ -165,7 +166,9 @@ class EmployeeMonitoringAgent:
             except Exception as e:
                 logger.error(f"Error in tracking loop: {e}")
 
-            time.sleep(interval)
+            elapsed = time.time() - start_time
+            sleep_time = max(0.1, interval - elapsed)
+            time.sleep(sleep_time)
             self.session_seconds += interval
 
     def sync_offline_cache(self):
