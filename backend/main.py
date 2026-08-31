@@ -251,21 +251,39 @@ def get_analytics_history(admin: str = Depends(auth_module.get_current_admin)):
 
     try:
         seven_days_ago = (datetime.utcnow() - timedelta(days=7)).date().isoformat()
-        logs_res = supabase_client.table("activity_logs").select("recorded_at, duration_seconds, category").gte("recorded_at", seven_days_ago).execute()
-        db_logs = logs_res.data if hasattr(logs_res, "data") else []
-
-        daily_data = {}
-        for log in db_logs:
-            ts_str = log["recorded_at"].split("T")[0]
-            if ts_str not in daily_data:
-                daily_data[ts_str] = {"total_seconds": 0, "prod_seconds": 0}
-
-            dur = log.get("duration_seconds", 5)
-            cat = log.get("category", "NEUTRAL")
-
-            daily_data[ts_str]["total_seconds"] += dur
-            if cat in ("CORE_WORK", "PRODUCTIVE"):
-                daily_data[ts_str]["prod_seconds"] += dur
+        
+        # 1. Primary approach: Try to query from the daily_analytics_summary view (optimized)
+        try:
+            res = supabase_client.table("daily_analytics_summary").select("*").gte("log_date", seven_days_ago).execute()
+            db_data = res.data if hasattr(res, "data") else []
+            
+            daily_data = {}
+            for item in db_data:
+                # view returns e.g. "2026-08-31" as log_date
+                ts_str = str(item["log_date"])
+                daily_data[ts_str] = {
+                    "total_seconds": item.get("total_seconds") or 0,
+                    "prod_seconds": item.get("prod_seconds") or 0
+                }
+        except Exception:
+            # 2. Fallback approach: If the view doesn't exist, page raw logs in python (max 10,000 records, newest first)
+            daily_data = {}
+            for offset in range(0, 10000, 1000):
+                res = supabase_client.table("activity_logs").select("recorded_at, duration_seconds, category").gte("recorded_at", seven_days_ago).order("recorded_at", desc=True).range(offset, offset + 999).execute()
+                db_logs = res.data if hasattr(res, "data") else []
+                if not db_logs:
+                    break
+                for log in db_logs:
+                    ts_str = log["recorded_at"].split("T")[0]
+                    if ts_str not in daily_data:
+                        daily_data[ts_str] = {"total_seconds": 0, "prod_seconds": 0}
+                    dur = log.get("duration_seconds", 5)
+                    cat = log.get("category", "NEUTRAL")
+                    daily_data[ts_str]["total_seconds"] += dur
+                    if cat in ("CORE_WORK", "PRODUCTIVE"):
+                        daily_data[ts_str]["prod_seconds"] += dur
+                if len(db_logs) < 1000:
+                    break
 
         result = []
         for i in range(6, -1, -1):
