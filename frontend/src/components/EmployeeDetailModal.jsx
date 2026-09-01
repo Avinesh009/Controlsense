@@ -84,25 +84,38 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const selectedDayIdleSeconds = activityLogs
     .filter((log) => log.is_idle && log.process_name !== 'Lunch Break' && log.process_name !== 'Screen Locked')
     .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
-  const selectedDayWorkSeconds = Math.max(0, selectedDayTotalSeconds - selectedDayBreakSeconds - selectedDayAwaySeconds - selectedDayIdleSeconds);
 
   // Check if today is selected to bind the header stats to live real-time values instead of static log list
   const isTodaySelected = selectedDate === new Date().toISOString().split('T')[0];
   const liveIdleSeconds = emp?.total_idle_seconds || 0;
   const liveBreakSeconds = emp?.total_break_seconds || 0;
   const liveAwaySeconds = emp?.total_away_seconds || 0;
-  const liveWorkSeconds = Math.max(0, totalSessionSeconds - liveBreakSeconds - liveIdleSeconds - liveAwaySeconds);
 
   // Compute total offline / sleep gaps from milestones
   const totalSleepSeconds = shiftEvents
     .filter((evt) => evt.type === 'SLEEP_GAP')
     .reduce((sum, evt) => sum + (evt.gap_seconds || 0), 0);
 
-  const displayTotalSeconds = (isTodaySelected ? totalSessionSeconds : selectedDayTotalSeconds) + totalSleepSeconds;
-  const displayWorkSeconds = isTodaySelected ? liveWorkSeconds : selectedDayWorkSeconds;
   const displayBreakSeconds = isTodaySelected ? liveBreakSeconds : selectedDayBreakSeconds;
   const displayAwaySeconds = isTodaySelected ? liveAwaySeconds : selectedDayAwaySeconds;
   const displayIdleSeconds = isTodaySelected ? liveIdleSeconds : selectedDayIdleSeconds;
+
+  // Strict Wall-Clock Shift Span: Difference between Shift Start and Last Check-in (or Shift End)
+  const startTimeMs = emp?.shift_start_time ? new Date(emp.shift_start_time).getTime() : null;
+  const endTimeMs = emp?.shift_end_time 
+    ? new Date(emp.shift_end_time).getTime() 
+    : (emp?.last_heartbeat ? new Date(emp.last_heartbeat).getTime() : null);
+
+  let totalClockSpanSeconds = 0;
+  if (startTimeMs && endTimeMs && endTimeMs >= startTimeMs) {
+    totalClockSpanSeconds = Math.floor((endTimeMs - startTimeMs) / 1000);
+  } else {
+    totalClockSpanSeconds = (isTodaySelected ? totalSessionSeconds : selectedDayTotalSeconds) + totalSleepSeconds;
+  }
+
+  const nonWorkSeconds = displayBreakSeconds + displayAwaySeconds + displayIdleSeconds + totalSleepSeconds;
+  const displayTotalSeconds = Math.max(totalClockSpanSeconds, nonWorkSeconds);
+  const displayWorkSeconds = Math.max(0, displayTotalSeconds - nonWorkSeconds);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
