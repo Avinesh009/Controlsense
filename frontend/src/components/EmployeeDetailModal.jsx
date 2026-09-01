@@ -338,13 +338,18 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                               BREAK_END: 'bg-emerald-400 ring-emerald-400/20',
                               LOCK: 'bg-amber-600 ring-amber-600/20',
                               UNLOCK: 'bg-teal-400 ring-teal-400/20',
+                              SLEEP_GAP: 'bg-purple-500 ring-purple-500/20',
                               DISCONNECT: 'bg-slate-500 ring-slate-500/20'
                             };
+                            const isSleep = evt.type === 'SLEEP_GAP';
                             return (
-                              <div key={idx} className="relative flex items-center justify-between">
+                              <div key={idx} className={`relative flex items-center justify-between ${isSleep ? 'p-1.5 -ml-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20' : ''}`}>
                                 <span className={`absolute -left-[26px] w-2.5 h-2.5 rounded-full ring-4 ${dotColors[evt.type] || 'bg-slate-400'}`}></span>
-                                <span className="text-slate-200 font-sans font-medium">{evt.event}</span>
-                                <span className="text-slate-400 text-[11px] font-semibold">
+                                <span className={`${isSleep ? 'text-purple-300 font-semibold flex items-center space-x-1' : 'text-slate-200'} font-sans font-medium`}>
+                                  {isSleep && <span>💤</span>}
+                                  <span>{evt.event}</span>
+                                </span>
+                                <span className={`${isSleep ? 'text-purple-400' : 'text-slate-400'} text-[11px] font-semibold font-mono`}>
                                   {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : (evt.time || 'N/A')}
                                 </span>
                               </div>

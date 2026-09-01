@@ -504,20 +504,38 @@ def get_employee_raw_logs(
             shift_events.append({"event": "Shift Started (Login)", "timestamp": first_log["recorded_at"], "type": "LOGIN"})
             
             last_state = first_log["process_name"]
+            last_log_time = datetime.fromisoformat(first_log["recorded_at"].replace("Z", "+00:00"))
             
             for log in db_logs_sorted[1:]:
                 current_state = log["process_name"]
+                current_time = datetime.fromisoformat(log["recorded_at"].replace("Z", "+00:00"))
+                gap_seconds = (current_time - last_log_time).total_seconds()
+                
+                # If there is a gap of >= 3 minutes (180s) without any telemetry check-ins,
+                # it means the computer was asleep, shut down, or disconnected.
+                if gap_seconds >= 180:
+                    gap_mins = int(gap_seconds // 60)
+                    gap_secs = int(gap_seconds % 60)
+                    time_desc = f"{gap_mins}m {gap_secs}s" if gap_mins > 0 else f"{gap_secs}s"
+                    shift_events.append({
+                        "event": f"Computer Asleep / Offline ({time_desc})",
+                        "timestamp": log["recorded_at"],
+                        "type": "SLEEP_GAP"
+                    })
+                
                 if current_state != last_state:
                     if current_state == "Lunch Break":
                         shift_events.append({"event": "Went on Lunch / Break", "timestamp": log["recorded_at"], "type": "BREAK_START"})
                     elif last_state == "Lunch Break":
                         shift_events.append({"event": "Resumed Work from Break", "timestamp": log["recorded_at"], "type": "BREAK_END"})
-                    elif current_state == "Screen Locked":
+                    elif current_state in ["Screen Locked", "LockApp.exe", "logonui.exe"]:
                         shift_events.append({"event": "Screen Locked (Away)", "timestamp": log["recorded_at"], "type": "LOCK"})
-                    elif last_state == "Screen Locked":
+                    elif last_state in ["Screen Locked", "LockApp.exe", "logonui.exe"]:
                         shift_events.append({"event": "Screen Unlocked (Returned)", "timestamp": log["recorded_at"], "type": "UNLOCK"})
                     
                     last_state = current_state
+                
+                last_log_time = current_time
             
             # Logout Event (check if the last event is a logout, otherwise mark last telemetry check-in)
             last_log = db_logs_sorted[-1]

@@ -30,13 +30,15 @@ export default function KPICards({ employees, alerts, onAlertsClick }) {
       colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
       icon: Monitor,
     },
-    {
-      title: 'Avg Productivity',
-      value: `${avgProductivity}%`,
-      subtext: 'Team efficiency score today',
-      colorClass: 'text-brand-400 bg-brand-500/10 border-brand-500/20',
-      icon: ShieldCheck,
-    },
+    
+    //{
+      //title: 'Avg Productivity',
+      //value: `${avgProductivity}%`,
+     // subtext: 'Team efficiency score today',
+     // colorClass: 'text-brand-400 bg-brand-500/10 border-brand-500/20',
+     // icon: ShieldCheck,
+    //},
+    
     {
       title: 'Team Work Hours',
       value: `${totalWorkHours} hrs`,
