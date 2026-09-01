@@ -93,7 +93,12 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const liveAwaySeconds = emp?.total_away_seconds || 0;
   const liveWorkSeconds = Math.max(0, totalSessionSeconds - liveBreakSeconds - liveIdleSeconds - liveAwaySeconds);
 
-  const displayTotalSeconds = isTodaySelected ? totalSessionSeconds : selectedDayTotalSeconds;
+  // Compute total offline / sleep gaps from milestones
+  const totalSleepSeconds = shiftEvents
+    .filter((evt) => evt.type === 'SLEEP_GAP')
+    .reduce((sum, evt) => sum + (evt.gap_seconds || 0), 0);
+
+  const displayTotalSeconds = (isTodaySelected ? totalSessionSeconds : selectedDayTotalSeconds) + totalSleepSeconds;
   const displayWorkSeconds = isTodaySelected ? liveWorkSeconds : selectedDayWorkSeconds;
   const displayBreakSeconds = isTodaySelected ? liveBreakSeconds : selectedDayBreakSeconds;
   const displayAwaySeconds = isTodaySelected ? liveAwaySeconds : selectedDayAwaySeconds;
@@ -284,6 +289,10 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                   <div className="text-slate-400">Unproductive Idle (Unlocked):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-amber-600/80">
                     {formatDuration(displayIdleSeconds)}
+                  </div>
+                  <div className="text-slate-400">Computer Asleep / Offline:</div>
+                  <div className="text-purple-400 text-right font-mono font-semibold">
+                    {formatDuration(totalSleepSeconds)}
                   </div>
                   <div className="text-slate-400">Shift Started (Login):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-emerald-400">

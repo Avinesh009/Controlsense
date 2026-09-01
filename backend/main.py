@@ -520,7 +520,8 @@ def get_employee_raw_logs(
                     shift_events.append({
                         "event": f"Computer Asleep / Offline ({time_desc})",
                         "timestamp": log["recorded_at"],
-                        "type": "SLEEP_GAP"
+                        "type": "SLEEP_GAP",
+                        "gap_seconds": int(gap_seconds)
                     })
                 
                 if current_state != last_state:
