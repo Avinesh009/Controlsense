@@ -101,7 +101,10 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const displayIdleSeconds = isTodaySelected ? liveIdleSeconds : selectedDayIdleSeconds;
 
   // Strict Wall-Clock Shift Span: Difference between Shift Start and Last Check-in (or Shift End)
-  const startTimeMs = emp?.shift_start_time ? new Date(emp.shift_start_time).getTime() : null;
+  const displayedShiftStartTime = (shiftEvents.length > 0 && shiftEvents[0].timestamp) 
+    ? shiftEvents[0].timestamp 
+    : emp?.shift_start_time;
+  const startTimeMs = displayedShiftStartTime ? new Date(displayedShiftStartTime).getTime() : null;
   const endTimeMs = emp?.shift_end_time 
     ? new Date(emp.shift_end_time).getTime() 
     : (emp?.last_heartbeat ? new Date(emp.last_heartbeat).getTime() : null);
@@ -309,7 +312,7 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                   </div>
                   <div className="text-slate-400">Shift Started (Login):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-emerald-400">
-                    {emp?.shift_start_time ? new Date(emp.shift_start_time).toLocaleTimeString() : 'N/A'}
+                    {displayedShiftStartTime ? new Date(displayedShiftStartTime).toLocaleTimeString() : 'N/A'}
                   </div>
                   <div className="text-slate-400">Shift Ended (Logout):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-rose-400">

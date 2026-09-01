@@ -469,19 +469,25 @@ def get_employee_raw_logs(
         start_time = f"{target_date_str}T00:00:00Z"
         end_time = f"{target_date_str}T23:59:59Z"
         
-        # 3. Query activity_logs table
-        logs_res = (
-            supabase_client.table("activity_logs")
-            .select("recorded_at, process_name, window_title, domain_url, category, is_idle, duration_seconds")
-            .eq("employee_id", emp_id)
-            .gte("recorded_at", start_time)
-            .lte("recorded_at", end_time)
-            .order("recorded_at", desc=True)
-            .limit(500)  # Fetch up to 500 rows to ensure we capture all daily events
-            .execute()
-        )
-        
-        db_logs = logs_res.data if hasattr(logs_res, "data") else []
+        # 3. Query all daily activity logs using range paging (ascending from start of day)
+        db_logs = []
+        for offset in range(0, 6000, 1000):
+            logs_res = (
+                supabase_client.table("activity_logs")
+                .select("recorded_at, process_name, window_title, domain_url, category, is_idle, duration_seconds")
+                .eq("employee_id", emp_id)
+                .gte("recorded_at", start_time)
+                .lte("recorded_at", end_time)
+                .order("recorded_at", desc=False)
+                .range(offset, offset + 999)
+                .execute()
+            )
+            chunk = logs_res.data if hasattr(logs_res, "data") else []
+            if not chunk:
+                break
+            db_logs.extend(chunk)
+            if len(chunk) < 1000:
+                break
         
         # 4. Map DB fields to return format
         result = []
