@@ -517,9 +517,9 @@ def get_employee_raw_logs(
                 current_time = datetime.fromisoformat(log["recorded_at"].replace("Z", "+00:00"))
                 gap_seconds = (current_time - last_log_time).total_seconds()
                 
-                # If there is a gap of >= 3 minutes (180s) without any telemetry check-ins,
-                # it means the computer was asleep, shut down, or disconnected.
-                if gap_seconds >= 180:
+                # If there is a gap of >= 3 minutes (180s) without check-ins:
+                # ONLY mark as SLEEP_GAP if the employee was NOT on an authorized Lunch Break!
+                if gap_seconds >= 180 and last_state != "Lunch Break":
                     gap_mins = int(gap_seconds // 60)
                     gap_secs = int(gap_seconds % 60)
                     time_desc = f"{gap_mins}m {gap_secs}s" if gap_mins > 0 else f"{gap_secs}s"

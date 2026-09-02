@@ -91,12 +91,31 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const liveBreakSeconds = emp?.total_break_seconds || 0;
   const liveAwaySeconds = emp?.total_away_seconds || 0;
 
-  // Compute total offline / sleep gaps from milestones
+  // Compute total offline / sleep gaps from milestones (excluding lunch break intervals)
   const totalSleepSeconds = shiftEvents
     .filter((evt) => evt.type === 'SLEEP_GAP')
     .reduce((sum, evt) => sum + (evt.gap_seconds || 0), 0);
 
-  const displayBreakSeconds = isTodaySelected ? liveBreakSeconds : selectedDayBreakSeconds;
+  // Calculate total break span from milestone timestamps (captures full break time even if laptop slept/closed)
+  let milestoneBreakSeconds = 0;
+  let activeBreakStart = null;
+  for (const evt of shiftEvents) {
+    if (evt.type === 'BREAK_START') {
+      activeBreakStart = new Date(evt.timestamp).getTime();
+    } else if (evt.type === 'BREAK_END' && activeBreakStart) {
+      const breakEnd = new Date(evt.timestamp).getTime();
+      milestoneBreakSeconds += Math.max(0, Math.floor((breakEnd - activeBreakStart) / 1000));
+      activeBreakStart = null;
+    }
+  }
+  if (activeBreakStart && isTodaySelected) {
+    milestoneBreakSeconds += Math.max(0, Math.floor((Date.now() - activeBreakStart) / 1000));
+  }
+
+  const displayBreakSeconds = Math.max(
+    isTodaySelected ? liveBreakSeconds : selectedDayBreakSeconds,
+    milestoneBreakSeconds
+  );
   const displayAwaySeconds = isTodaySelected ? liveAwaySeconds : selectedDayAwaySeconds;
   const displayIdleSeconds = isTodaySelected ? liveIdleSeconds : selectedDayIdleSeconds;
 
