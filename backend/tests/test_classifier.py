@@ -42,3 +42,35 @@ def test_browser_without_known_url_is_neutral():
     category, name, weight = classifier.classify("chrome.exe", "New Tab")
     assert category == "NEUTRAL"
     assert name == "Web Browser"
+
+
+def test_instagram_detection():
+    classifier = ActivityClassifier()
+    cat, name, weight = classifier.classify("chrome.exe", "Instagram - Feed", active_url="https://www.instagram.com")
+    assert cat == "ENTERTAINMENT"
+    assert name == "Instagram"
+    assert weight == -100
+
+
+def test_facebook_detection():
+    classifier = ActivityClassifier()
+    cat, name, weight = classifier.classify("chrome.exe", "(5) Facebook", active_url="https://www.facebook.com")
+    assert cat == "ENTERTAINMENT"
+    assert name == "Facebook"
+    assert weight == -100
+
+
+def test_whatsapp_detection():
+    classifier = ActivityClassifier()
+    cat, name, weight = classifier.classify("chrome.exe", "(1) WhatsApp", active_url="https://web.whatsapp.com")
+    assert cat == "ENTERTAINMENT"
+    assert name == "WhatsApp"
+    assert weight == -100
+
+
+def test_x_twitter_detection():
+    classifier = ActivityClassifier()
+    cat, name, weight = classifier.classify("chrome.exe", "Home / X", active_url="https://x.com/home")
+    assert cat == "ENTERTAINMENT"
+    assert name == "X (Twitter)"
+    assert weight == -100

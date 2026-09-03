@@ -10,9 +10,21 @@ DEFAULT_RULES = [
     # 2. Entertainment & Distractions
     {"pattern": r"youtube\.com|youtu\.be", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "YouTube", "weight": -100},
     {"pattern": r"youtube", "match_type": "TITLE", "category": "ENTERTAINMENT", "display_name": "YouTube Video", "weight": -100},
+    {"pattern": r"instagram\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "Instagram", "weight": -100},
+    {"pattern": r"instagram", "match_type": "TITLE", "category": "ENTERTAINMENT", "display_name": "Instagram", "weight": -100},
+    {"pattern": r"^instagram(\.exe)?$", "match_type": "PROCESS", "category": "ENTERTAINMENT", "display_name": "Instagram App", "weight": -100},
+    {"pattern": r"facebook\.com|fb\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "Facebook", "weight": -100},
+    {"pattern": r"facebook", "match_type": "TITLE", "category": "ENTERTAINMENT", "display_name": "Facebook", "weight": -100},
+    {"pattern": r"^facebook(\.exe)?$", "match_type": "PROCESS", "category": "ENTERTAINMENT", "display_name": "Facebook App", "weight": -100},
+    {"pattern": r"whatsapp\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "WhatsApp", "weight": -100},
+    {"pattern": r"whatsapp", "match_type": "TITLE", "category": "ENTERTAINMENT", "display_name": "WhatsApp", "weight": -100},
+    {"pattern": r"^whatsapp(\.exe)?$", "match_type": "PROCESS", "category": "ENTERTAINMENT", "display_name": "WhatsApp App", "weight": -100},
+    {"pattern": r"x\.com|twitter\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "X (Twitter)", "weight": -100},
+    {"pattern": r"twitter|\s/\sx\b", "match_type": "TITLE", "category": "ENTERTAINMENT", "display_name": "X (Twitter)", "weight": -100},
+    {"pattern": r"^twitter(\.exe)?$", "match_type": "PROCESS", "category": "ENTERTAINMENT", "display_name": "X (Twitter) App", "weight": -100},
     {"pattern": r"netflix\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "Netflix", "weight": -100},
     {"pattern": r"twitch\.tv", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "Twitch", "weight": -100},
-    {"pattern": r"facebook\.com|instagram\.com|tiktok\.com|twitter\.com|x\.com|reddit\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "Social Media", "weight": -80},
+    {"pattern": r"tiktok\.com|reddit\.com", "match_type": "DOMAIN", "category": "ENTERTAINMENT", "display_name": "Social Media", "weight": -80},
     {"pattern": r"^spotify(\.exe)?$", "match_type": "PROCESS", "category": "ENTERTAINMENT", "display_name": "Spotify", "weight": -30},
     {"pattern": r"^steam(\.exe)?$", "match_type": "PROCESS", "category": "ENTERTAINMENT", "display_name": "Steam Gaming", "weight": -100},
 
@@ -57,9 +69,27 @@ class ActivityClassifier:
         if "control id" in title_clean or "controlid" in process_clean or "control-id" in url_clean:
             return ("CORE_WORK", "Control ID Tool", 100)
 
-        # 2. Second priority: Check for YouTube & Entertainment
-        if "youtube.com" in url_clean or "youtu.be" in url_clean or "youtube" in title_clean:
+        # 2. Second priority: Specific Social Media & Entertainment Platforms
+        if "youtube.com" in url_clean or "youtu.be" in url_clean or "youtube" in title_clean or "youtube" in process_clean:
             return ("ENTERTAINMENT", "YouTube", -100)
+        
+        if "instagram.com" in url_clean or "instagram" in title_clean or "instagram" in process_clean:
+            return ("ENTERTAINMENT", "Instagram", -100)
+
+        if "facebook.com" in url_clean or "fb.com" in url_clean or "facebook" in title_clean or "facebook" in process_clean:
+            return ("ENTERTAINMENT", "Facebook", -100)
+
+        if "whatsapp.com" in url_clean or "whatsapp" in title_clean or "whatsapp" in process_clean:
+            return ("ENTERTAINMENT", "WhatsApp", -100)
+
+        if "x.com" in url_clean or "twitter.com" in url_clean or "twitter" in title_clean or " / x" in title_clean or "x.exe" in process_clean:
+            return ("ENTERTAINMENT", "X (Twitter)", -100)
+        
+        if "netflix.com" in url_clean or "netflix" in title_clean or "netflix" in process_clean:
+            return ("ENTERTAINMENT", "Netflix", -100)
+
+        if "twitch.tv" in url_clean or "twitch" in title_clean:
+            return ("ENTERTAINMENT", "Twitch", -100)
 
         # 3. Match against dynamic regex rules
         for rule in self.rules:

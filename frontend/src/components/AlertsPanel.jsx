@@ -50,7 +50,7 @@ export default function AlertsPanel({ alerts, onSelectEmployee, onAlertResolved 
 
       <div>
         <h2 className="text-lg font-bold text-white tracking-tight">Security & Distraction Alerts</h2>
-        <p className="text-xs text-slate-400">Automated flags for prolonged YouTube streaming, excessive idle time, or unauthorized processes</p>
+        <p className="text-xs text-slate-400">Automated flags for prolonged YouTube, Instagram, Facebook, WhatsApp, X (Twitter), excessive idle time, or unauthorized processes</p>
       </div>
 
       {/* Active Alerts */}

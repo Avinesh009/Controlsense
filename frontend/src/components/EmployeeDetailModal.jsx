@@ -284,11 +284,23 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                     {sortedApps.map(([appName, seconds]) => {
                       const pct = totalSessionSeconds > 0 ? (seconds / totalSessionSeconds) * 100 : 0;
                       const isWork = appName.includes('Control ID') || appName.includes('Code') || appName.includes('VS Code');
-                      const isYouTube = appName.includes('YouTube') || appName.includes('Social');
+                      const isEntertainment = 
+                        appName.includes('YouTube') || 
+                        appName.includes('Instagram') || 
+                        appName.includes('Facebook') || 
+                        appName.includes('WhatsApp') || 
+                        appName.includes('Twitter') || 
+                        appName.includes('X (Twitter)') || 
+                        appName.includes('Social') || 
+                        appName.includes('Netflix') || 
+                        appName.includes('Twitch') || 
+                        appName.includes('TikTok') || 
+                        appName.includes('Reddit') || 
+                        appName.includes('Spotify');
                       const isIdle = appName.includes('Idle');
 
                       // Pick bar color based on app type
-                      const barColor = isYouTube
+                      const barColor = isEntertainment
                         ? 'bg-rose-500 shadow-glow-rose'
                         : isIdle
                         ? 'bg-amber-500'

@@ -298,9 +298,8 @@ class DataAggregator:
         elif category == "ENTERTAINMENT":
             status = "ENTERTAINMENT_ALERT"
             emp["total_active_seconds"] += interval
-            if "youtube" in (url or "").lower() or "youtube" in win_title.lower():
-                emp["youtube_seconds"] += interval
-                emp["youtube_alert_timer"] += interval
+            emp["youtube_seconds"] += interval
+            emp["youtube_alert_timer"] += interval
             emp["unproductive_seconds"] += interval
         elif category == "CORE_WORK":
             status = "ACTIVE"
@@ -333,7 +332,7 @@ class DataAggregator:
             prod_seconds = emp["control_id_seconds"] + emp["other_productive_seconds"]
             emp["productivity_score"] = round((prod_seconds / total_active) * 100, 1)
 
-        # Check for alert trigger (> 30 min continuous YouTube)
+        # Check for alert trigger (> 20s continuous entertainment / social media)
         unresolved_alert = next((a for a in self.alerts if a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" and not a.get("is_resolved", False)), None)
         
         secs_total = emp["youtube_seconds"]
@@ -342,7 +341,8 @@ class DataAggregator:
         else:
             duration_str = f"{secs_total // 60}m {secs_total % 60}s"
             
-        message_text = f"Excessive YouTube activity detected: {duration_str} total today."
+        app_label = display_name if display_name in ["YouTube", "Instagram", "Facebook", "WhatsApp", "X (Twitter)", "Netflix", "Twitch", "TikTok", "Social Media"] else "Social Media / Distraction"
+        message_text = f"Excessive {app_label} activity detected: {duration_str} total today."
 
         if emp["youtube_alert_timer"] > 20:
             if not unresolved_alert:

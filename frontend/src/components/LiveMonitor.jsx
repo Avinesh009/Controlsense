@@ -21,7 +21,7 @@ export default function LiveMonitor({ employees, summary, onSelectEmployee }) {
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
           <span>Control ID / Work</span>
           <span className="inline-block w-2 h-2 rounded-full bg-rose-500 ml-2"></span>
-          <span>YouTube / Entertainment</span>
+          <span>Social / Entertainment</span>
           <span className="inline-block w-2 h-2 rounded-full bg-amber-500 ml-2"></span>
           <span>Idle</span>
         </div>
@@ -80,7 +80,7 @@ export default function LiveMonitor({ employees, summary, onSelectEmployee }) {
                     {isYouTube ? (
                       <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/30 animate-pulse">
                         <PlayCircle className="w-3.5 h-3.5 text-rose-500" />
-                        <span>Watching YouTube</span>
+                        <span>{emp.current_app_display || 'Entertainment Alert'}</span>
                       </span>
                     ) : isControlId ? (
                       <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
