@@ -217,23 +217,17 @@ class EmployeeMonitoringAgent:
 
     def setup_gui(self):
         self.root = tk.Tk()
-        self.root.title("ControlSense Tracker")
-        self.root.geometry("380x420")
+        self.root.title("CM Attendance")
+        self.root.geometry("380x380")
         self.root.configure(bg="#0f172a") # Dark Slate Theme
         self.root.resizable(False, False)
         
         # Header title
         header = tk.Label(
-            self.root, text="CONTROLSENSE", 
+            self.root, text="ATTENDANCE", 
             font=("Helvetica", 14, "bold"), fg="#10b981", bg="#0f172a"
         )
-        header.pack(pady=(20, 5))
-        
-        subtitle = tk.Label(
-            self.root, text="Enterprise Tracking Client", 
-            font=("Helvetica", 9), fg="#64748b", bg="#0f172a"
-        )
-        subtitle.pack(pady=(0, 20))
+        header.pack(pady=(25, 20))
 
         # Check for saved employee code to auto-populate
         saved_code = self.config.get("employee_code", "")
@@ -342,29 +336,18 @@ class EmployeeMonitoringAgent:
             self.active_frame, text=f"Employee: {self.employee_code}",
             font=("Helvetica", 10, "bold"), fg="#38bdf8", bg="#0f172a"
         )
-        self.status_label.pack(anchor="w", pady=(0, 10))
+        self.status_label.pack(anchor="w", pady=(10, 10))
 
         # Live Clock Timer
         self.timer_label = tk.Label(
             self.active_frame, text="Shift Time: 00:00:00",
             font=("Courier New", 14, "bold"), fg="#f8fafc", bg="#0f172a"
         )
-        self.timer_label.pack(pady=10)
-
-        # Active App Info
-        app_box = tk.Frame(self.active_frame, bg="#1e293b", bd=1, relief="solid")
-        app_box.pack(fill="x", pady=(0, 20), ipady=5)
-        
-        self.activity_label = tk.Label(
-            app_box, text="Current app: Starting...",
-            font=("Helvetica", 9), fg="#94a3b8", bg="#1e293b",
-            wraplength=300
-        )
-        self.activity_label.pack(padx=10, pady=5)
+        self.timer_label.pack(pady=(20, 25))
 
         # Buttons Panel
         btn_panel = tk.Frame(self.active_frame, bg="#0f172a")
-        btn_panel.pack(fill="x")
+        btn_panel.pack(fill="x", pady=(10, 0))
 
         self.break_btn = tk.Button(
             btn_panel, text="Lunch / Break",
@@ -372,7 +355,7 @@ class EmployeeMonitoringAgent:
             activebackground="#d97706", activeforeground="#ffffff",
             relief="flat", cursor="hand2", command=self.toggle_break
         )
-        self.break_btn.pack(side="left", fill="x", expand=True, padx=(0, 5), ipady=6)
+        self.break_btn.pack(side="left", fill="x", expand=True, padx=(0, 5), ipady=8)
 
         logout_btn = tk.Button(
             btn_panel, text="End Shift",
@@ -380,7 +363,7 @@ class EmployeeMonitoringAgent:
             activebackground="#e11d48", activeforeground="#ffffff",
             relief="flat", cursor="hand2", command=self.handle_logout
         )
-        logout_btn.pack(side="right", fill="x", expand=True, padx=(5, 0), ipady=6)
+        logout_btn.pack(side="right", fill="x", expand=True, padx=(5, 0), ipady=8)
 
         # Start background GUI timer tick
         self.update_gui_timer()

@@ -70,7 +70,30 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   // Aggregate historical app durations from database logs when viewing past dates
   const historicalAppDurations = {};
   for (const log of activityLogs) {
-    const key = log.is_idle ? "Idle / Away" : (log.process_name || "Unknown Application");
+    const procLower = (log.process_name || "").toLowerCase();
+    const isBrowser = ["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "web browser"].includes(procLower) || procLower.includes("chrome") || procLower.includes("msedge") || procLower.includes("firefox");
+
+    let key = "Unknown Application";
+    if (log.is_idle) {
+      key = "Idle / Away";
+    } else if (log.category === "ENTERTAINMENT") {
+      // Show specific platform name (YouTube, Instagram, Facebook, WhatsApp, X/Twitter, etc.)
+      const title = log.window_title || "";
+      if (title.includes("YouTube") || procLower.includes("youtube")) key = "YouTube";
+      else if (title.includes("Instagram") || procLower.includes("instagram")) key = "Instagram";
+      else if (title.includes("Facebook") || procLower.includes("facebook")) key = "Facebook";
+      else if (title.includes("WhatsApp") || procLower.includes("whatsapp")) key = "WhatsApp";
+      else if (title.includes("Twitter") || title.includes("/ X") || procLower.includes("twitter") || procLower.includes("x.com")) key = "X (Twitter)";
+      else if (title.includes("Netflix")) key = "Netflix";
+      else if (title.includes("Twitch")) key = "Twitch";
+      else key = log.process_name || "Entertainment";
+    } else if (isBrowser && log.category !== "CORE_WORK") {
+      // General web browsing -> Web Browser
+      key = "Web Browser";
+    } else {
+      key = log.process_name || "Unknown Application";
+    }
+
     historicalAppDurations[key] = (historicalAppDurations[key] || 0) + (log.duration_seconds || 0);
   }
 

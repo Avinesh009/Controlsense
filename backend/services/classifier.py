@@ -91,6 +91,8 @@ class ActivityClassifier:
         if "twitch.tv" in url_clean or "twitch" in title_clean:
             return ("ENTERTAINMENT", "Twitch", -100)
 
+        is_browser = any(b in process_clean for b in ["chrome", "msedge", "firefox", "brave", "opera"])
+
         # 3. Match against dynamic regex rules
         for rule in self.rules:
             pattern = rule["pattern"]
@@ -98,16 +100,26 @@ class ActivityClassifier:
 
             if mtype == "DOMAIN" and url_clean:
                 if re.search(pattern, url_clean, re.IGNORECASE):
-                    return (rule["category"], rule["display_name"], rule["weight"])
+                    if rule.get("category") == "ENTERTAINMENT":
+                        return (rule["category"], rule["display_name"], rule["weight"])
+                    elif is_browser:
+                        return (rule["category"], "Web Browser", rule["weight"])
+                    else:
+                        return (rule["category"], rule["display_name"], rule["weight"])
             elif mtype == "PROCESS" and process_clean:
                 if re.search(pattern, process_clean, re.IGNORECASE):
                     return (rule["category"], rule["display_name"], rule["weight"])
             elif mtype == "TITLE" and title_clean:
                 if re.search(pattern, title_clean, re.IGNORECASE):
-                    return (rule["category"], rule["display_name"], rule["weight"])
+                    if rule.get("category") == "ENTERTAINMENT":
+                        return (rule["category"], rule["display_name"], rule["weight"])
+                    elif is_browser:
+                        return (rule["category"], "Web Browser", rule["weight"])
+                    else:
+                        return (rule["category"], rule["display_name"], rule["weight"])
 
         # Default fallback
-        if "chrome" in process_clean or "msedge" in process_clean or "firefox" in process_clean:
+        if is_browser:
             return ("NEUTRAL", "Web Browser", 0)
 
         return ("NEUTRAL", process_name or "Unknown Application", 0)
