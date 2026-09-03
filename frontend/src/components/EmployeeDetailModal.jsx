@@ -64,9 +64,17 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
 
   if (!employeeCode) return null;
 
-  // Reactively track the employee if they are currently online and we are looking at today's stats,
-  // otherwise fallback to the historical aggregated data returned by the backend API.
-  const appDurations = emp?.app_durations || {};
+  // Check if today is selected to bind the header stats to live real-time values instead of static log list
+  const isTodaySelected = selectedDate === new Date().toISOString().split('T')[0];
+
+  // Aggregate historical app durations from database logs when viewing past dates
+  const historicalAppDurations = {};
+  for (const log of activityLogs) {
+    const key = log.is_idle ? "Idle / Away" : (log.process_name || "Unknown Application");
+    historicalAppDurations[key] = (historicalAppDurations[key] || 0) + (log.duration_seconds || 0);
+  }
+
+  const appDurations = isTodaySelected ? (emp?.app_durations || {}) : historicalAppDurations;
 
   // Calculate total seconds logged to compute percentages
   const totalSessionSeconds = Object.values(appDurations).reduce((sum, val) => sum + val, 0);
@@ -85,8 +93,6 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
     .filter((log) => log.is_idle && log.process_name !== 'Lunch Break' && log.process_name !== 'Screen Locked')
     .reduce((sum, log) => sum + (log.duration_seconds || 0), 0);
 
-  // Check if today is selected to bind the header stats to live real-time values instead of static log list
-  const isTodaySelected = selectedDate === new Date().toISOString().split('T')[0];
   const liveIdleSeconds = emp?.total_idle_seconds || 0;
   const liveBreakSeconds = emp?.total_break_seconds || 0;
   const liveAwaySeconds = emp?.total_away_seconds || 0;
@@ -119,14 +125,25 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const displayAwaySeconds = isTodaySelected ? liveAwaySeconds : selectedDayAwaySeconds;
   const displayIdleSeconds = isTodaySelected ? liveIdleSeconds : selectedDayIdleSeconds;
 
-  // Strict Wall-Clock Shift Span: Difference between Shift Start and Last Check-in (or Shift End)
-  const displayedShiftStartTime = (shiftEvents.length > 0 && shiftEvents[0].timestamp) 
-    ? shiftEvents[0].timestamp 
-    : emp?.shift_start_time;
+  // Strict Wall-Clock Shift Span: Difference between Shift Start and Shift End (scoped strictly to selected date)
+  const logoutEvt = shiftEvents.find((evt) => evt.type === 'LOGOUT');
+  const lastEvt = shiftEvents.length > 0 ? shiftEvents[shiftEvents.length - 1] : null;
+
+  const displayedShiftStartTime = isTodaySelected
+    ? (emp?.shift_start_time || (shiftEvents.length > 0 ? shiftEvents[0].timestamp : null))
+    : (shiftEvents.length > 0 ? shiftEvents[0].timestamp : null);
+
+  const displayedShiftEndTime = isTodaySelected
+    ? emp?.shift_end_time
+    : (logoutEvt ? logoutEvt.timestamp : null);
+
+  const displayedLastCheckin = isTodaySelected
+    ? (emp?.last_heartbeat || (lastEvt ? lastEvt.timestamp : null))
+    : (lastEvt ? lastEvt.timestamp : null);
+
   const startTimeMs = displayedShiftStartTime ? new Date(displayedShiftStartTime).getTime() : null;
-  const endTimeMs = emp?.shift_end_time 
-    ? new Date(emp.shift_end_time).getTime() 
-    : (emp?.last_heartbeat ? new Date(emp.last_heartbeat).getTime() : null);
+  const targetEndTimestamp = displayedShiftEndTime || displayedLastCheckin;
+  const endTimeMs = targetEndTimestamp ? new Date(targetEndTimestamp).getTime() : null;
 
   let totalClockSpanSeconds = 0;
   if (startTimeMs && endTimeMs && endTimeMs >= startTimeMs) {
@@ -335,11 +352,11 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
                   </div>
                   <div className="text-slate-400">Shift Ended (Logout):</div>
                   <div className="text-slate-300 text-right font-mono font-semibold text-rose-400">
-                    {emp?.shift_end_time ? new Date(emp.shift_end_time).toLocaleTimeString() : 'Active Now / Offline'}
+                    {displayedShiftEndTime ? new Date(displayedShiftEndTime).toLocaleTimeString() : (isTodaySelected ? 'Active Now / Offline' : 'Shift Ended')}
                   </div>
                   <div className="text-slate-400">Last Reported Check-in:</div>
                   <div className="text-slate-300 text-right font-mono text-slate-400">
-                    {emp?.last_heartbeat ? new Date(emp.last_heartbeat).toLocaleTimeString() : 'N/A'}
+                    {displayedLastCheckin ? new Date(displayedLastCheckin).toLocaleTimeString() : 'N/A'}
                   </div>
                 </div>
               </div>
