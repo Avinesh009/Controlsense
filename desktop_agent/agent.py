@@ -21,7 +21,7 @@ logger = logging.getLogger("MonitoringAgent")
 class EmployeeMonitoringAgent:
     def __init__(self, config_path: str = "config.json"):
         # Setup persistent AppData directory for config storage
-        appdata_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'ControlSenseTracker')
+        appdata_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'CMAttendance')
         self.config_path = os.path.join(appdata_dir, "config.json")
         self.config = self._load_config(config_path)
         
@@ -50,14 +50,18 @@ class EmployeeMonitoringAgent:
         self.break_btn = None
 
     def _load_config(self, default_filename: str):
-        # 1. Load from AppData if it exists
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, "r") as f:
-                    logger.info(f"Loaded config from AppData: {self.config_path}")
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Failed to load config from AppData: {e}")
+        # 1. Base default configuration (20-second heartbeat)
+        base_config = {
+            "employee_code": "",
+            "device_id": "EMPLOYEE",
+            "server_url": "https://controlsense.onrender.com/api/telemetry/heartbeat",
+            "heartbeat_interval_seconds": 20,
+            "idle_threshold_seconds": 180,
+            "api_secret_key": "2f33cc7c8a2cc67f7e447ed653c765eea4b0c38190a2de6b392456d31a92712d",
+            "employee_name": "",
+            "email": "",
+            "role": ""
+        }
 
         # 2. Try to load from PyInstaller bundled folder if frozen
         if getattr(sys, 'frozen', False):
@@ -65,29 +69,35 @@ class EmployeeMonitoringAgent:
             if os.path.exists(bundled_path):
                 try:
                     with open(bundled_path, "r") as f:
-                        logger.info(f"Loaded bundled config: {bundled_path}")
-                        return json.load(f)
+                        base_config.update(json.load(f))
                 except Exception as e:
                     logger.error(f"Failed to load bundled config: {e}")
 
         # 3. Load from current working directory (dev mode)
-        if os.path.exists(default_filename):
+        elif os.path.exists(default_filename):
             try:
                 with open(default_filename, "r") as f:
-                    logger.info(f"Loaded local config: {default_filename}")
-                    return json.load(f)
+                    base_config.update(json.load(f))
             except Exception as e:
                 logger.error(f"Failed to load local config: {e}")
 
-        # 4. Fallback default config
-        logger.warning("No config file found. Using default fallback configuration.")
-        return {
-            "employee_code": "",
-            "device_id": "WIN-DESKTOP-CLIENT",
-            "server_url": "http://127.0.0.1:8000/api/telemetry/heartbeat",
-            "heartbeat_interval_seconds": 5,
-            "idle_threshold_seconds": 180
-        }
+        # 4. Load saved employee credentials from AppData if present
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r") as f:
+                    user_saved = json.load(f)
+                    if user_saved.get("employee_name"):
+                        base_config["employee_name"] = user_saved["employee_name"]
+                    if user_saved.get("email"):
+                        base_config["email"] = user_saved["email"]
+                    if user_saved.get("role"):
+                        base_config["role"] = user_saved["role"]
+                    if user_saved.get("employee_code"):
+                        base_config["employee_code"] = user_saved["employee_code"]
+            except Exception as e:
+                logger.error(f"Failed to load config from AppData: {e}")
+
+        return base_config
 
     def _save_config(self):
         try:

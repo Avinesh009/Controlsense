@@ -152,9 +152,9 @@ export default function EmployeeDetailModal({ employeeCode, employees, onClose }
   const logoutEvt = shiftEvents.find((evt) => evt.type === 'LOGOUT');
   const lastEvt = shiftEvents.length > 0 ? shiftEvents[shiftEvents.length - 1] : null;
 
-  const displayedShiftStartTime = isTodaySelected
-    ? (emp?.shift_start_time || (shiftEvents.length > 0 ? shiftEvents[0].timestamp : null))
-    : (shiftEvents.length > 0 ? shiftEvents[0].timestamp : null);
+  // Always prioritize the true earliest morning login from the database milestones
+  const trueEarliestLogin = shiftEvents.length > 0 ? shiftEvents[0].timestamp : null;
+  const displayedShiftStartTime = trueEarliestLogin || emp?.shift_start_time || null;
 
   const displayedShiftEndTime = isTodaySelected
     ? emp?.shift_end_time

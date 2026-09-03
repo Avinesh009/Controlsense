@@ -230,7 +230,18 @@ class DataAggregator:
 
         # Track first check-in of the shift (Login)
         if not emp.get("shift_start_time"):
-            emp["shift_start_time"] = now_iso
+            if supabase_client and emp.get("id"):
+                try:
+                    today_start = f"{datetime.utcnow().date().isoformat()}T00:00:00Z"
+                    earliest = supabase_client.table("activity_logs").select("recorded_at").eq("employee_id", emp["id"]).gte("recorded_at", today_start).order("recorded_at", desc=False).limit(1).execute()
+                    if earliest.data:
+                        emp["shift_start_time"] = earliest.data[0]["recorded_at"]
+                    else:
+                        emp["shift_start_time"] = now_iso
+                except Exception:
+                    emp["shift_start_time"] = now_iso
+            else:
+                emp["shift_start_time"] = now_iso
 
         # Handle explicit logout heartbeat
         if proc_name == "Logout":
