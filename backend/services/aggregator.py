@@ -317,11 +317,25 @@ class DataAggregator:
         app_key = "Idle / Away" if is_idle else (display_name or proc_name or "Unknown Application")
         emp["app_durations"][app_key] = emp["app_durations"].get(app_key, 0) + interval
 
+        # Determine privacy-safe sanitized window title:
+        # If it's a browser:
+        # - Entertainment platforms (YouTube, Instagram, Facebook, WhatsApp, X, etc.) -> Keep detailed platform title
+        # - Control ID Tool -> Keep Control ID Tool
+        # - General browsing (ChatGPT, Google searches, news, docs, articles, etc.) -> Sanitize to "Web Search / Browsing"
+        is_browser = any(b in (proc_name or "").lower() for b in ["chrome", "msedge", "firefox", "brave", "opera", "safari"])
+        if is_browser and category not in ["ENTERTAINMENT", "CORE_WORK"]:
+            browser_brand = "Google Chrome" if "chrome" in (proc_name or "").lower() else ("Microsoft Edge" if "msedge" in (proc_name or "").lower() else "Web Browser")
+            sanitized_window_title = f"Web Search / Browsing - {browser_brand}"
+            sanitized_url = None
+        else:
+            sanitized_window_title = win_title
+            sanitized_url = url
+
         # Update live state
         emp["current_status"] = status
         emp["current_process"] = proc_name
-        emp["current_window_title"] = win_title
-        emp["current_url"] = url
+        emp["current_window_title"] = sanitized_window_title
+        emp["current_url"] = sanitized_url
         emp["current_category"] = category
         emp["current_app_display"] = display_name
         emp["last_heartbeat"] = now_iso
@@ -365,7 +379,7 @@ class DataAggregator:
             "id": str(uuid.uuid4()),
             "employee_code": email,
             "process_name": proc_name,
-            "window_title": win_title,
+            "window_title": sanitized_window_title,
             "display_name": display_name,
             "category": category,
             "is_idle": is_idle,
@@ -393,8 +407,8 @@ class DataAggregator:
                 supabase_client.table("activity_logs").insert({
                     "employee_id": db_emp_id,
                     "process_name": proc_name,
-                    "window_title": win_title,
-                    "domain_url": url,
+                    "window_title": sanitized_window_title,
+                    "domain_url": sanitized_url,
                     "category": category,
                     "is_idle": is_idle,
                     "duration_seconds": interval
