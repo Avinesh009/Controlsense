@@ -26,7 +26,7 @@ class EmployeeMonitoringAgent:
         self.config = self._load_config(config_path)
         
         self.window_tracker = WindowTracker()
-        self.idle_tracker = IdleTracker(idle_threshold_seconds=self.config.get("idle_threshold_seconds", 180))
+        self.idle_tracker = IdleTracker(idle_threshold_seconds=self.config.get("idle_threshold_seconds", 300))
         db_path = os.path.join(appdata_dir, "agent_cache.db")
         self.cache = OfflineBuffer(db_path=db_path)
         
@@ -50,13 +50,13 @@ class EmployeeMonitoringAgent:
         self.break_btn = None
 
     def _load_config(self, default_filename: str):
-        # 1. Base default configuration (20-second heartbeat)
+        # 1. Base default configuration (20-second heartbeat, 5-minute idle threshold)
         base_config = {
             "employee_code": "",
             "device_id": "EMPLOYEE",
             "server_url": "https://controlsense.onrender.com/api/telemetry/heartbeat",
             "heartbeat_interval_seconds": 20,
-            "idle_threshold_seconds": 180,
+            "idle_threshold_seconds": 300,
             "api_secret_key": "2f33cc7c8a2cc67f7e447ed653c765eea4b0c38190a2de6b392456d31a92712d",
             "employee_name": "",
             "email": "",
@@ -310,19 +310,27 @@ class EmployeeMonitoringAgent:
             font=("Helvetica", 10), state="readonly"
         )
         self.role_combo['values'] = (
-            'Developer', 
-            'Designer', 
-            'Data Entry Operator', 
-            'QA Engineer', 
-            'Content Writer', 
-            'Support Executive', 
-            'Manager'
+            'Product Engineer',
+            'Digital Communications Associate',
+            'Manager - People & Operations',
+            'Manager - Shipping & Logistics',
+            'Manager - Finance & Accounting',
+            'Junior Merchandiser',
+            'Senior Merchandiser',
+            'Fashion Designer',
+            'Manager - Planning & Quality Control',
+            'Chief Textiles Officer',
+            'Junior Fashion Designer',
+            'Executive Strategist',
+            'Senior Fashion Designer',
+            'Manager - Fabrics & Processing',
+            'Manager - Production & Finishing'
         )
-        saved_role = self.config.get("role", "Developer")
+        saved_role = self.config.get("role", "Product Engineer")
         if saved_role in self.role_combo['values']:
             self.role_combo.set(saved_role)
         else:
-            self.role_combo.set('Developer')
+            self.role_combo.set('Product Engineer')
         self.role_combo.pack(fill="x", pady=(0, 20))
 
         # Start Shift button

@@ -15,7 +15,7 @@ CREATE TABLE employees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     full_name VARCHAR(100) NOT NULL,            -- Holds the employee's name
     email VARCHAR(100) UNIQUE NOT NULL,         -- Unique email address (serves as unique login identifier)
-    role VARCHAR(50) DEFAULT 'Team Member',     -- Holds the Position / Role
+    role VARCHAR(100) DEFAULT 'Team Member',     -- Holds the Position / Role
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -307,16 +307,23 @@ class DataAggregator:
             status = "IDLE"
             emp["total_idle_seconds"] += interval
         elif category == "ENTERTAINMENT":
-            status = "ENTERTAINMENT_ALERT"
             emp["total_active_seconds"] += interval
             emp["youtube_seconds"] += interval
             emp["youtube_alert_timer"] += interval
             emp["unproductive_seconds"] += interval
+            
+            # Only trigger ENTERTAINMENT_ALERT status if usage exceeds 10 continuous minutes (600s)
+            if emp["youtube_alert_timer"] >= 600:
+                status = "ENTERTAINMENT_ALERT"
+            else:
+                status = "ACTIVE"
         elif category == "CORE_WORK":
+            emp["youtube_alert_timer"] = 0
             status = "ACTIVE"
             emp["total_active_seconds"] += interval
             emp["control_id_seconds"] += interval
         else: # PRODUCTIVE or NEUTRAL
+            emp["youtube_alert_timer"] = 0
             status = "ACTIVE"
             emp["total_active_seconds"] += interval
             if category == "PRODUCTIVE":
@@ -357,7 +364,7 @@ class DataAggregator:
             prod_seconds = emp["control_id_seconds"] + emp["other_productive_seconds"]
             emp["productivity_score"] = round((prod_seconds / total_active) * 100, 1)
 
-        # Check for alert trigger (> 20s continuous entertainment / social media)
+        # Check for alert trigger (> 10 minutes / 600s continuous entertainment / social media)
         unresolved_alert = next((a for a in self.alerts if a["employee_code"] == email and a["alert_type"] == "EXCESSIVE_ENTERTAINMENT" and not a.get("is_resolved", False)), None)
         
         secs_total = emp["youtube_seconds"]
@@ -369,7 +376,8 @@ class DataAggregator:
         app_label = display_name if display_name in ["YouTube", "Instagram", "Facebook", "WhatsApp", "X (Twitter)", "Netflix", "Twitch", "TikTok", "Social Media"] else "Social Media / Distraction"
         message_text = f"Excessive {app_label} activity detected: {duration_str} total today."
 
-        if emp["youtube_alert_timer"] > 20:
+        # Trigger alert after 10 minutes (600 seconds) of entertainment activity
+        if emp["youtube_alert_timer"] >= 600:
             if not unresolved_alert:
                 self.alerts.insert(0, {
                     "id": str(uuid.uuid4()),

@@ -40,7 +40,7 @@ export default function LiveMonitor({ employees, summary, onSelectEmployee }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {activeEmployees.map((emp) => {
             const isControlId = emp.current_category === 'CORE_WORK' || (emp.current_app_display || '').includes('Control ID');
-            const isYouTube = emp.current_category === 'ENTERTAINMENT' || emp.current_status === 'ENTERTAINMENT_ALERT';
+            const isYouTube = emp.current_status === 'ENTERTAINMENT_ALERT';
             const isIdle = emp.current_status === 'IDLE';
 
             return (

@@ -3,7 +3,7 @@
   "device_id": "EMPLOYEE",
   "server_url": "https://controlsense.onrender.com/api/telemetry/heartbeat",
   "heartbeat_interval_seconds": 20,
-  "idle_threshold_seconds": 180,
+  "idle_threshold_seconds": 300,
   "api_secret_key": "2f33cc7c8a2cc67f7e447ed653c765eea4b0c38190a2de6b392456d31a92712d",
   "employee_name": "",
   "email": "",
